@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Impression Map</string>
+    <string name="title_activity_impression_addition">ImpressionAdditionActivity</string>
+    <string name="title_activity_main">MainActivity</string>
 </resources>
