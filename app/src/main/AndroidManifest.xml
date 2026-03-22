@@ -15,11 +15,18 @@
             android:name=".ImpressionAdditionActivity"
             android:exported="false"
             android:label="@string/title_activity_impression_addition"
+            android:noHistory="true"
             android:theme="@style/Theme.ImpressionMap" />
         <activity
             android:name=".MainActivity"
+            android:exported="false"
+            android:noHistory="false"
+            android:theme="@style/Theme.ImpressionMap" />
+        <activity
+            android:name=".LoginActivity"
             android:exported="true"
-            android:theme="@style/Theme.ImpressionMap">
+            android:theme="@style/Theme.ImpressionMap"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
