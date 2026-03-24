@@ -3,4 +3,5 @@
     <string name="title_activity_impression_addition">ImpressionAdditionActivity</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="title_activity_launcher">LauncherActivity</string>
+    <string name="title_activity_impressions_list">ImpressionsListActivity</string>
 </resources>

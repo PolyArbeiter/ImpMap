@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ImpressionMap">
         <activity
+            android:name=".ImpressionsListActivity"
+            android:exported="false"
+            android:label="@string/title_activity_impressions_list"
+            android:theme="@style/Theme.ImpressionMap" />
+        <activity
             android:name=".ImpressionAdditionActivity"
             android:exported="false"
             android:label="@string/title_activity_impression_addition"
@@ -25,8 +30,8 @@
         <activity
             android:name=".LoginActivity"
             android:exported="true"
-            android:theme="@style/Theme.ImpressionMap"
-            android:noHistory="true">
+            android:noHistory="true"
+            android:theme="@style/Theme.ImpressionMap">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
