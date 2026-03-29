@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
     <application
         android:allowBackup="true"
@@ -12,23 +13,23 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ImpressionMap">
         <activity
-            android:name=".ImpressionsListActivity"
+            android:name=".presentation.activity.ImpressionsListActivity"
             android:exported="false"
             android:label="@string/title_activity_impressions_list"
             android:theme="@style/Theme.ImpressionMap" />
         <activity
-            android:name=".ImpressionAdditionActivity"
+            android:name=".presentation.activity.ImpressionAdditionActivity"
             android:exported="false"
             android:label="@string/title_activity_impression_addition"
             android:noHistory="true"
             android:theme="@style/Theme.ImpressionMap" />
         <activity
-            android:name=".MainActivity"
+            android:name=".presentation.activity.MainActivity"
             android:exported="false"
             android:noHistory="false"
             android:theme="@style/Theme.ImpressionMap" />
         <activity
-            android:name=".LoginActivity"
+            android:name=".presentation.activity.LoginActivity"
             android:exported="true"
             android:noHistory="true"
             android:theme="@style/Theme.ImpressionMap">

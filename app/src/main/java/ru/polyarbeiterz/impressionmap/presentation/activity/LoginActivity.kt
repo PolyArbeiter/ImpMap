@@ -1,4 +1,4 @@
-package ru.polyarbeiterz.impressionmap
+package ru.polyarbeiterz.impressionmap.presentation.activity
 
 import android.content.Context
 import android.content.Intent

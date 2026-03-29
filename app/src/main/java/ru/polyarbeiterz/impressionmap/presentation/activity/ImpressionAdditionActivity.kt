@@ -1,4 +1,4 @@
-package ru.polyarbeiterz.impressionmap
+package ru.polyarbeiterz.impressionmap.presentation.activity
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 class ImpressionAdditionActivity : ComponentActivity() {
