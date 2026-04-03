@@ -4,6 +4,7 @@ import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yandex.mapkit.Animation
+import com.yandex.mapkit.ScreenPoint
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.mapview.MapView
@@ -36,6 +37,18 @@ class MapViewModel(
         _uiState.update { it.copy(currentLocation = currentLocation) }
     }
 
+    fun updateFocusInfo() {
+        _uiState.update { mapUiState ->
+            val newMapUiState = mapUiState.copy()
+            val mapWindow = newMapUiState.mapView!!.mapWindow
+            mapWindow.focusPoint = ScreenPoint(
+                mapWindow.width() / 2f,
+                mapWindow.height() / 2f,
+            )
+            newMapUiState
+        }
+    }
+
     fun fetchCurrentLocation() {
         viewModelScope.launch {
             _isLoadingLocation.value = true
@@ -52,6 +65,8 @@ class MapViewModel(
             }
         }
     }
+
+    fun getMap(): com.yandex.mapkit.map.Map? = _uiState.value.mapView?.map
 
     private fun moveMapToLocation(location: Location) {
         val mapView = _uiState.value.mapView

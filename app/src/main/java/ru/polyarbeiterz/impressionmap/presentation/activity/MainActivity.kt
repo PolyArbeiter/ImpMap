@@ -1,5 +1,7 @@
 package ru.polyarbeiterz.impressionmap.presentation.activity
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.PointF
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,7 +23,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -78,7 +80,11 @@ class MainActivity : ComponentActivity() {
                     topBar = { MainTopBar(mapViewModel) },
                     bottomBar = { MainBottomBar() }
                 ) { innerPadding ->
-                    MapInteractionScreen(modifier = Modifier.padding(innerPadding), mapViewModel)
+                    MapInteractionScreen(
+                        LocalContext.current,
+                        modifier = Modifier.padding(innerPadding),
+                        mapViewModel
+                    )
                 }
             }
         }
@@ -96,7 +102,8 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MapInteractionScreen(modifier: Modifier = Modifier, viewModel: MapViewModel) {
+fun MapInteractionScreen(context: Context, modifier: Modifier = Modifier, viewModel: MapViewModel) {
+
     val uiState by viewModel.uiState.collectAsState()
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
@@ -112,18 +119,16 @@ fun MapInteractionScreen(modifier: Modifier = Modifier, viewModel: MapViewModel)
             factory = { ctx ->
                 MapView(ctx).apply {
                     viewModel.setMapView(this)
+
                     val map = this.mapWindow.map
+                    val mapWindow = this.mapWindow
+
+                    mapWindow.addSizeChangedListener(
+                         {_, _, _ -> viewModel.updateFocusInfo()}
+                    )
+                    viewModel.updateFocusInfo()
 
                     map.move(START_POSITION, START_ANIMATION, null)
-
-                    placemarkMapObject = map.mapObjects.addPlacemark().apply {
-                        geometry = START_POSITION.target
-                        setIcon(
-                            ImageProvider.fromResource(ctx, R.drawable.baseline_location_marker_24),
-                            IconStyle().apply { setAnchor(PointF(0.5f, 1.0f)) }
-                        )
-                        isDraggable = true
-                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -132,7 +137,7 @@ fun MapInteractionScreen(modifier: Modifier = Modifier, viewModel: MapViewModel)
 
         MapControls(
             onZoomIn = {
-                uiState.mapView?.mapWindow?.map?.let { map ->
+                viewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
                     map.move(
                         CameraPosition(pos.target, pos.zoom + ZOOM_STEP, pos.azimuth, pos.tilt),
@@ -142,7 +147,7 @@ fun MapInteractionScreen(modifier: Modifier = Modifier, viewModel: MapViewModel)
                 }
             },
             onZoomOut = {
-                uiState.mapView?.mapWindow?.map?.let { map ->
+                viewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
                     map.move(
                         CameraPosition(pos.target, pos.zoom - ZOOM_STEP, pos.azimuth, pos.tilt),
@@ -151,17 +156,31 @@ fun MapInteractionScreen(modifier: Modifier = Modifier, viewModel: MapViewModel)
                     )
                 }
             },
-            onFocusGeometry = {
-
-            },
-            onFocusPlacemark = {
-
-            },
             onCreatePlacemark = {
-
+                placemarkMapObject = placemarkMapObject.apply {
+                    placemarkMapObject?.setVisible(true)
+                    val focusPoint = viewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
+                    val point = viewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint) ?: return@apply
+                    placemarkMapObject?.geometry = point
+                } ?:viewModel.getMap()!!.mapObjects.addPlacemark().apply {
+                    geometry = viewModel.getMap()!!.cameraPosition.target
+                    setIcon(
+                        ImageProvider.fromResource(context, R.drawable.ic_dollar_pin),
+                        IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
+                    isDraggable = true
+                }
             },
-            modifier = Modifier.fillMaxSize(),
-            viewModel
+            onRejectPlaceMark = {
+              placemarkMapObject?.setVisible(false)
+            },
+            onStartImpCreation = {
+                context.startActivity(
+                    Intent(
+                        context, ImpressionAdditionActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
@@ -171,13 +190,13 @@ private const val ZOOM_STEP = 1f
 fun MapControls(
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
-    onFocusGeometry: () -> Unit,
-    onFocusPlacemark: () -> Unit,
     onCreatePlacemark: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: MapViewModel
+    onRejectPlaceMark: () -> Unit,
+    onStartImpCreation: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    var selectPointMode by remember {mutableStateOf(false)}
+
     Box(modifier = modifier) {
         // Zoom Controls - Right side
         Column(
@@ -190,14 +209,53 @@ fun MapControls(
                 onClick = onZoomIn,
                 modifier = Modifier.size(48.dp)
             ) {
-                Text("+", fontSize = MaterialTheme.typography.headlineSmall.fontSize)
+                Icon(
+                    painter = painterResource(R.drawable.plus),
+                    contentDescription = null,
+                )
             }
 
             FloatingActionButton(
                 onClick = onZoomOut,
                 modifier = Modifier.size(48.dp)
             ) {
-                Text("-", fontSize = MaterialTheme.typography.headlineLarge.fontSize)
+                Icon(
+                    painter = painterResource(R.drawable.minus),
+                    contentDescription = null,
+                )
+            }
+
+            if (!selectPointMode) {
+                // Usual mode
+                FloatingActionButton(
+                    onClick = { onCreatePlacemark(); selectPointMode = true },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.new_box),
+                        contentDescription = null,
+                    )
+                }
+            } else {
+                // Confirm selected point or not
+                FloatingActionButton(
+                    onClick = { onStartImpCreation() },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.check),
+                        contentDescription = null,
+                    )
+                }
+                FloatingActionButton(
+                    onClick = { onRejectPlaceMark(); selectPointMode = false },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.cross_bolnisi),
+                        contentDescription = null,
+                    )
+                }
             }
         }
     }
@@ -205,7 +263,6 @@ fun MapControls(
 
 @Composable
 fun MainTopBar(viewModel: MapViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
     val isLoading by viewModel.isLoadingLocation.collectAsState()
 
     Row(
