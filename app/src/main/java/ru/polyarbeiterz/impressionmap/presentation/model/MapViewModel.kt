@@ -1,5 +1,7 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
+import android.content.Context
+import android.graphics.PointF
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,21 +9,31 @@ import com.yandex.mapkit.Animation
 import com.yandex.mapkit.ScreenPoint
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.mapview.MapView
+import com.yandex.runtime.image.ImageProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ru.polyarbeiterz.impressionmap.data.LocationRepository
+import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
+import ru.polyarbeiterz.impressionmap.data.service.LocationService
+import javax.inject.Inject
 
 data class MapUiState(
     val currentLocation: Location? = null,
     val mapView: MapView? = null
 )
 
-class MapViewModel(
-    private val locationRepository: LocationRepository
+@HiltViewModel
+class MapViewModel @Inject constructor(
+    @ApplicationContext val context: Context,
+    val locationService: LocationService,
+    val impressionService: ImpressionService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -53,7 +65,7 @@ class MapViewModel(
         viewModelScope.launch {
             _isLoadingLocation.value = true
             try {
-                val location = locationRepository.getCurrentLocation()
+                val location = locationService.getCurrentLocation()
                 if (location != null) {
                     updateLocation(location)
                     moveMapToLocation(location)
@@ -68,6 +80,18 @@ class MapViewModel(
 
     fun getMap(): com.yandex.mapkit.map.Map? = _uiState.value.mapView?.map
 
+    fun createPlacemark(point: Point) {
+        getMap()!!.mapObjects.addPlacemark().apply {
+            geometry = point
+            setIcon(
+                ImageProvider.fromResource(
+                    context,
+                    R.drawable.ic_dollar_pin
+                ),
+                IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
+            isDraggable = true
+        }
+    }
     private fun moveMapToLocation(location: Location) {
         val mapView = _uiState.value.mapView
         if (mapView != null) {

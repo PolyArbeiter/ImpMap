@@ -37,12 +37,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -51,15 +52,16 @@ import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
-
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.R
-import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
-import ru.polyarbeiterz.impressionmap.data.LocationRepository
+import ru.polyarbeiterz.impressionmap.data.entity.Impression
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
+import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private lateinit var locationRepository: LocationRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,23 +69,17 @@ class MainActivity : ComponentActivity() {
 
         MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
         MapKitFactory.initialize(this)
-        locationRepository = LocationRepository(this)
-        // TODO: request for permissions and turn on gps
-
-        val mapViewModel = MapViewModel(locationRepository)
-        // TODO: that time DI frameworks exist...
 
         setContent {
             ImpressionMapTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    topBar = { MainTopBar(mapViewModel) },
+                    topBar = { MainTopBar() },
                     bottomBar = { MainBottomBar() }
                 ) { innerPadding ->
                     MapInteractionScreen(
                         LocalContext.current,
-                        modifier = Modifier.padding(innerPadding),
-                        mapViewModel
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
@@ -102,11 +98,19 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MapInteractionScreen(context: Context, modifier: Modifier = Modifier, viewModel: MapViewModel) {
+fun MapInteractionScreen(
+    context: Context, modifier:
+    Modifier = Modifier,
+    viewModel: MapViewModel = hiltViewModel()
+) {
 
     val uiState by viewModel.uiState.collectAsState()
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
+
+    var savedImpressions by remember {
+        mutableStateOf<MutableSet<Impression>>(mutableSetOf())
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -129,6 +133,25 @@ fun MapInteractionScreen(context: Context, modifier: Modifier = Modifier, viewMo
                     viewModel.updateFocusInfo()
 
                     map.move(START_POSITION, START_ANIMATION, null)
+
+                    var got: List<Impression>
+                    // read all placemarks
+                    viewModel.viewModelScope.launch {
+                        got = viewModel.impressionService.getAll()
+//                            .filter {
+//                                    imp -> imp.longitude != null &&
+//                                    imp.latitude != null &&
+//                                    !savedImpressions.contains(imp)
+//                            }
+//                            .forEach { imp ->  savedImpressions.add(imp) }
+                    }
+
+                    // reflect on page
+                    savedImpressions.forEach { imp ->
+                        viewModel.createPlacemark(
+                            Point(imp.latitude!!, imp.longitude!!)
+                        )
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -179,6 +202,23 @@ fun MapInteractionScreen(context: Context, modifier: Modifier = Modifier, viewMo
                         context, ImpressionAdditionActivity::class.java
                     )
                 )
+                // read all placemarks
+                viewModel.viewModelScope.launch {
+                    viewModel.impressionService.getAll()
+                        .filter {
+                                imp -> imp.longitude != null &&
+                                imp.latitude != null &&
+                                !savedImpressions.contains(imp)
+                        }
+                        .forEach { imp ->  savedImpressions.add(imp) }
+                }
+
+                // reflect on page
+                savedImpressions.forEach { imp ->
+                    viewModel.createPlacemark(
+                        Point(imp.latitude!!, imp.longitude!!)
+                    )
+                }
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -262,7 +302,7 @@ fun MapControls(
 }
 
 @Composable
-fun MainTopBar(viewModel: MapViewModel) {
+fun MainTopBar(viewModel: MapViewModel = hiltViewModel()) {
     val isLoading by viewModel.isLoadingLocation.collectAsState()
 
     Row(

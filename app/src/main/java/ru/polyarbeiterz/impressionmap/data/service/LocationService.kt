@@ -1,4 +1,4 @@
-package ru.polyarbeiterz.impressionmap.data
+package ru.polyarbeiterz.impressionmap.data.service
 
 import android.Manifest
 import android.content.Context
@@ -8,10 +8,14 @@ import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import javax.inject.Inject
 import kotlin.coroutines.resume
 
-class LocationRepository(private val context: Context) {
+class LocationService @Inject constructor(
+    @ApplicationContext val context: Context
+) {
     private val fusedLocationClient: FusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(context)
     }

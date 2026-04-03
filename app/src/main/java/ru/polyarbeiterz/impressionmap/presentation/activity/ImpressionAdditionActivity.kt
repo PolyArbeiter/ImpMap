@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,8 +26,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +40,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.data.entity.Impression
+import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
+@AndroidEntryPoint
 class ImpressionAdditionActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,18 +57,18 @@ class ImpressionAdditionActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ImpressionMapTheme {
-                Scaffold(topBar = {
-                    TopBar()
-                }, modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        modifier = Modifier.padding(innerPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        ImpressionAdditionMenu(
-                            modifier = Modifier.padding(8.dp)
-                        )
+                Scaffold(
+                    topBar = { TopBar() },
+                    modifier = Modifier.fillMaxSize()) { innerPadding ->
+                        Column(
+                            modifier = Modifier.padding(innerPadding),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            ImpressionAdditionMenu(
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
                     }
-                }
             }
         }
     }
@@ -64,7 +76,38 @@ class ImpressionAdditionActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ImpressionAdditionMenu(modifier: Modifier = Modifier) {
+fun DatePickerModal(
+    onDateSelected: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                onDateSelected(datePickerState.selectedDateMillis)
+                onDismiss()
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ImpressionAdditionMenu(
+    modifier: Modifier = Modifier,
+    impAdditionModel: ImpressionAdditionModel = hiltViewModel()
+) {
     var checkedSaveLocally by remember { mutableStateOf(true) }
     var checkedSendToServer by remember { mutableStateOf(false) }
     var textFieldName by remember { mutableStateOf("") }
@@ -86,7 +129,10 @@ fun ImpressionAdditionMenu(modifier: Modifier = Modifier) {
             placeholder = { Text(text = "Описание") },
             modifier = Modifier.fillMaxWidth()
         )
-        //Text(text = "Дата и время")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "Дата и время")
+
+        }
         //TODO() Добавить DatePicker
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Сохранить на устройстве")
@@ -133,6 +179,20 @@ fun ImpressionAdditionMenu(modifier: Modifier = Modifier) {
                 }
             }
         }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = {
+                impAdditionModel.viewModelScope.launch {
+                    impAdditionModel.impService.insertAll(
+                        Impression(
+                            latitude = 60.012750,
+                            longitude = 30.395935,
+                        )
+                    )
+                }
+            }) {
+                Text(text="Сохранить")
+            }
+        }
     }
 }
 
@@ -143,10 +203,9 @@ fun TopBar() {
         colors = topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             titleContentColor = MaterialTheme.colorScheme.primary,
-        ), title = {
-            Text(text = "Добавление воспоминания™")
-            //TODO() Вместо текста тут должны быть 3 кнопки - сравни с дизайном в Figma
-        })
+        ),
+        title = {Text(text = "Редактирование воспоминания")}
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -154,17 +213,17 @@ fun TopBar() {
 @Composable
 fun ImpressionAdditionMenuPreview() {
     ImpressionMapTheme {
-        Scaffold(topBar = {
-            TopBar()
-        }, modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Column(
-                modifier = Modifier.padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                ImpressionAdditionMenu(
-                    modifier = Modifier.padding(8.dp)
-                )
+        Scaffold(
+            topBar = { TopBar() },
+            modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Column(
+                    modifier = Modifier.padding(innerPadding),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    ImpressionAdditionMenu(
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
-        }
     }
 }
