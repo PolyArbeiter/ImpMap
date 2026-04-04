@@ -1,12 +1,7 @@
-package ru.polyarbeiterz.impressionmap.presentation.activity
+package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.PointF
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,61 +39,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import com.yandex.mapkit.Animation
-import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.Impression
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
-        MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
-        MapKitFactory.initialize(this)
-
-        setContent {
-            ImpressionMapTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    topBar = { MainTopBar() },
-                    bottomBar = { MainBottomBar() }
-                ) { innerPadding ->
-                    MapInteractionScreen(
-                        LocalContext.current,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+@Composable
+fun MapComposable(navController: NavController) {
+    ImpressionMapTheme {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = { MainTopBar(navController) },
+            bottomBar = { MainBottomBar(navController) }
+        ) { innerPadding ->
+            MapInteractionScreen(
+                navController,
+                LocalContext.current,
+                modifier = Modifier.padding(innerPadding)
+            )
         }
     }
-    override fun onStart() {
-        super.onStart()
-        MapKitFactory.getInstance().onStart()
-    }
-    override fun onStop() {
-        MapKitFactory.getInstance().onStop()
-        super.onStop()
-    }
-
 }
 
 
 @Composable
 fun MapInteractionScreen(
+    navController: NavController,
     context: Context, modifier:
     Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel()
@@ -159,6 +134,7 @@ fun MapInteractionScreen(
         )
 
         MapControls(
+            navController,
             onZoomIn = {
                 viewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
@@ -197,11 +173,7 @@ fun MapInteractionScreen(
               placemarkMapObject?.setVisible(false)
             },
             onStartImpCreation = {
-                context.startActivity(
-                    Intent(
-                        context, ImpressionAdditionActivity::class.java
-                    )
-                )
+                navController.navigate("impression_addition")
                 // read all placemarks
                 viewModel.viewModelScope.launch {
                     viewModel.impressionService.getAll()
@@ -228,6 +200,7 @@ private const val ZOOM_STEP = 1f
 
 @Composable
 fun MapControls(
+    navController: NavController,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onCreatePlacemark: () -> Unit,
@@ -302,7 +275,7 @@ fun MapControls(
 }
 
 @Composable
-fun MainTopBar(viewModel: MapViewModel = hiltViewModel()) {
+fun MainTopBar(navController: NavController, viewModel: MapViewModel = hiltViewModel()) {
     val isLoading by viewModel.isLoadingLocation.collectAsState()
 
     Row(
@@ -355,7 +328,7 @@ fun MainTopBar(viewModel: MapViewModel = hiltViewModel()) {
 }
 
 @Composable
-fun MainBottomBar() {
+fun MainBottomBar(navController: NavController) {
     Surface(
         color = Color.LightGray,
         modifier = Modifier

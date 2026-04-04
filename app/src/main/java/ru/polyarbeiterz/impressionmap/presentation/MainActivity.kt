@@ -1,7 +1,6 @@
-package ru.polyarbeiterz.impressionmap.presentation.activity
+package ru.polyarbeiterz.impressionmap.presentation
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +40,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.yandex.mapkit.MapKitFactory
+import dagger.hilt.android.AndroidEntryPoint
+import ru.polyarbeiterz.impressionmap.BuildConfig
+import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionAdditionScreen
+import ru.polyarbeiterz.impressionmap.presentation.screen.MapComposable
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 class Server(val name: String, val ip: String, val port: String)
@@ -48,32 +56,72 @@ class Server(val name: String, val ip: String, val port: String)
 // И вывод тоста об ошибке, если что-то не подходит
 // Добавить в конструктор парсинг того и другого. Может быть добавить отдельный класс для адреса
 
-class LoginActivity : ComponentActivity() {
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
+        MapKitFactory.initialize(this)
+
         setContent {
-            ImpressionMapTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
-                ) {
-                    ChoiceScreen(context = LocalContext.current)
-                }
-            }
+            AppNavigation(LocalContext.current)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        MapKitFactory.getInstance().onStart()
+    }
+    override fun onStop() {
+        MapKitFactory.getInstance().onStop()
+        super.onStop()
+    }
+}
+
+@Composable
+fun AppNavigation(context: Context) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "choice_screen"
+    ) {
+        composable("choice_screen") {
+            ChoiceScreen(navController = navController, context = context)
+        }
+
+        composable("map_screen") {
+            MapComposable(navController)
+        }
+
+        composable("impression_addition") {
+            ImpressionAdditionScreen(navController)
         }
     }
 }
 
 
 @Composable
-fun ChoiceScreen(modifier: Modifier = Modifier, context: Context) {
-    Box(modifier = modifier.fillMaxSize()) {
-        ChoiceButton(modifier = Modifier.align(Alignment.Center), context = context)
+fun ChoiceScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    context: Context
+) {
+    ImpressionMapTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
+        ) {
+            Box(modifier = modifier.fillMaxSize()) {
+                ChoiceButton(navController, modifier = Modifier.align(Alignment.Center), context = context)
+            }
+        }
     }
 }
 
 @Composable
-fun ChoiceButton(modifier: Modifier = Modifier, context: Context) {
+fun ChoiceButton(navController: NavController, modifier: Modifier = Modifier, context: Context) {
     var showModal by remember { mutableStateOf(false) }
 
     OutlinedCard(
@@ -82,7 +130,7 @@ fun ChoiceButton(modifier: Modifier = Modifier, context: Context) {
             .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp)
     ) {
-        ChoiceDialog(showModal, context, onDismissRequest = { showModal = false })
+        ChoiceDialog(navController, showModal, context, onDismissRequest = { showModal = false })
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -113,7 +161,7 @@ fun ChoiceButton(modifier: Modifier = Modifier, context: Context) {
 }
 
 @Composable
-fun ChoiceDialog(showModal: Boolean, context: Context, onDismissRequest: () -> Unit) {
+fun ChoiceDialog(navController: NavController, showModal: Boolean, context: Context, onDismissRequest: () -> Unit) {
     var serverList by remember { mutableStateOf(listOf<Server>()) }
     var showAdditionModal by remember { mutableStateOf(false) }
 
@@ -162,11 +210,7 @@ fun ChoiceDialog(showModal: Boolean, context: Context, onDismissRequest: () -> U
                 }
                 Button(
                     modifier = Modifier.fillMaxWidth(), onClick = {
-                        context.startActivity(
-                            Intent(
-                                context, MainActivity::class.java
-                            )
-                        )
+                        navController.navigate("map_screen")
                     }) { Text(text = "Продолжить") }
             }
         }
@@ -298,7 +342,7 @@ fun ServerAdditionDialog(
 fun PreviewChoiceButton() {
     ImpressionMapTheme {
 //        ChoiceScreen(context = LocalContext.current)
-        ChoiceDialog(showModal = true, context = LocalContext.current, onDismissRequest = {})
+//        ChoiceDialog(showModal = true, context = LocalContext.current, onDismissRequest = {})
 //        ServerAdditionDialog(showModal = true, onDismissRequest = {})
     }
 }
