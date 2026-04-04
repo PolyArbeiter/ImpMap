@@ -7,8 +7,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import ru.polyarbeiterz.impressionmap.data.dao.ImpressionDao
 import ru.polyarbeiterz.impressionmap.data.database.AppDatabase
+import ru.polyarbeiterz.impressionmap.data.database.MIGRATION_1_2
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -22,14 +22,19 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "impression_database"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides
     fun getImpressionDao(
         database: AppDatabase
-    ): ImpressionDao {
-        return database.impressionDao()
-    }
+    ) = database.impressionDao()
+
+    @Provides
+    fun getHostDao(
+        database: AppDatabase
+    ) = database.hostDao()
 
 }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -25,8 +24,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -48,15 +51,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import ru.polyarbeiterz.impressionmap.BuildConfig
+import ru.polyarbeiterz.impressionmap.data.entity.Host
+import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
 import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionAdditionScreen
 import ru.polyarbeiterz.impressionmap.presentation.screen.MapComposable
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
-
-class Server(val name: String, val ip: String, val port: String)
-//TODO() Необходимо добавить санитизацию/парсинг IP-адреса и порта
-// И вывод тоста об ошибке, если что-то не подходит
-// Добавить в конструктор парсинг того и другого. Может быть добавить отдельный класс для адреса
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -173,16 +175,31 @@ fun ChoiceButton(navController: NavController, modifier: Modifier = Modifier, co
 fun ChoiceDialog(
     navController: NavController,
     showModal: Boolean,
-    context: Context, onDismissRequest: () -> Unit
+    context: Context, onDismissRequest: () -> Unit,
+    mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
-    var serverList by remember { mutableStateOf(listOf<Server>()) }
+    val serverList = remember { mutableStateSetOf<Host>() }
     var showAdditionModal by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        serverList.clear()
+        mainActivityModel.hostService.getAll()
+            .forEach { host ->
+                serverList.add(host)
+            }
+    }
 
     ServerAdditionDialog(
         showModal = showAdditionModal,
         onDismissRequest = { showAdditionModal = false },
-        onAddition = { server: Server ->
-            serverList = serverList + server
+        onAddition = { server: Host ->
+            // add and update serverList
+            mainActivityModel.viewModelScope.launch {
+                runBlocking { mainActivityModel.insertHost(server) }
+                mainActivityModel.hostService.getAll()
+                    .filter { !serverList.contains(it) }
+                    .forEach { serverList.add(it) }
+            }
             showAdditionModal = false
         })
 
@@ -206,13 +223,12 @@ fun ChoiceDialog(
                             chosen = true
                         )
                     }
-                    items(serverList) { server ->
+                    items(serverList.size) { index ->
+                        val el = serverList.elementAt(index)
                         ChoiceCard(
-                            cardName = server.name,
-                            cardDescription = "IP: " + server.ip + ", порт: " + server.port,
+                            cardName = el.name ?: "Нет имени",
+                            cardDescription = "IP: " + el.ip + ", порт: " + el.port,
                             onClick = {},
-                            //TODO() При нажатии на сервер, все остальные должны перестать быть активными
-                            // Ввести систему выбора текущего сервера для работы наверное
                             chosen = false
                         )
                     }
@@ -284,7 +300,7 @@ fun ServerAdditionDialog(
     showModal: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onAddition: (server: Server) -> Unit
+    onAddition: (server: Host) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -332,8 +348,8 @@ fun ServerAdditionDialog(
                     Button(
                         onClick = {
                             onAddition(
-                                Server(
-                                    name = name, ip = address, port = port
+                                Host(
+                                    name = name, ip = address, port = port.toInt()
                                 )
                             )
                             name = ""
