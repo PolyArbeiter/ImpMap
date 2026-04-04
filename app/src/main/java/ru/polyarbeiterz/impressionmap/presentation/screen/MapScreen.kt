@@ -27,6 +27,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,8 +84,8 @@ fun MapInteractionScreen(
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
 
-    var savedImpressions by remember {
-        mutableStateOf<MutableSet<Impression>>(mutableSetOf())
+    val savedImpressions = remember {
+        mutableStateSetOf<Impression>()
     }
 
     DisposableEffect(Unit) {
@@ -107,25 +108,33 @@ fun MapInteractionScreen(
                     )
                     viewModel.updateFocusInfo()
 
-                    map.move(START_POSITION, START_ANIMATION, null)
-
-                    var got: List<Impression>
-                    // read all placemarks
+                    // set initial position (dirty)
                     viewModel.viewModelScope.launch {
-                        got = viewModel.impressionService.getAll()
-//                            .filter {
-//                                    imp -> imp.longitude != null &&
-//                                    imp.latitude != null &&
-//                                    !savedImpressions.contains(imp)
-//                            }
-//                            .forEach { imp ->  savedImpressions.add(imp) }
+                        val loc = viewModel.locationService.getCurrentLocation()
+                        val point = Point(
+                            loc?.latitude ?: START_POSITION.target.latitude,
+                            loc?.latitude ?: START_POSITION.target.latitude)
+                        map.move(
+                            CameraPosition(point, 15f, 0f, 0f),
+                            START_ANIMATION,
+                            null
+                        )
                     }
 
-                    // reflect on page
-                    savedImpressions.forEach { imp ->
-                        viewModel.createPlacemark(
-                            Point(imp.latitude!!, imp.longitude!!)
-                        )
+                    // relfect all placemarks with coords (dirty)
+                    viewModel.viewModelScope.launch {
+                        viewModel.impressionService.getAll()
+                            .filter {
+                                    imp -> imp.longitude != null &&
+                                    imp.latitude != null &&
+                                    !savedImpressions.contains(imp)
+                            }
+                            .forEach { imp ->
+                                savedImpressions.add(imp)
+                                viewModel.createPlacemark(
+                                    Point(imp.latitude!!, imp.longitude!!)
+                                )
+                            }
                     }
                 }
             },
@@ -134,7 +143,6 @@ fun MapInteractionScreen(
         )
 
         MapControls(
-            navController,
             onZoomIn = {
                 viewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
@@ -156,15 +164,18 @@ fun MapInteractionScreen(
                 }
             },
             onCreatePlacemark = {
+                // need refactor
                 placemarkMapObject = placemarkMapObject.apply {
+                    // move and existing placemark
                     placemarkMapObject?.setVisible(true)
                     val focusPoint = viewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
                     val point = viewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint) ?: return@apply
                     placemarkMapObject?.geometry = point
                 } ?:viewModel.getMap()!!.mapObjects.addPlacemark().apply {
+                    // create placemark if null
                     geometry = viewModel.getMap()!!.cameraPosition.target
                     setIcon(
-                        ImageProvider.fromResource(context, R.drawable.ic_dollar_pin),
+                        ImageProvider.fromResource(context, R.drawable.marker_down),
                         IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
                     isDraggable = true
                 }
@@ -172,25 +183,10 @@ fun MapInteractionScreen(
             onRejectPlaceMark = {
               placemarkMapObject?.setVisible(false)
             },
-            onStartImpCreation = {
-                navController.navigate("impression_addition")
-                // read all placemarks
-                viewModel.viewModelScope.launch {
-                    viewModel.impressionService.getAll()
-                        .filter {
-                                imp -> imp.longitude != null &&
-                                imp.latitude != null &&
-                                !savedImpressions.contains(imp)
-                        }
-                        .forEach { imp ->  savedImpressions.add(imp) }
-                }
-
-                // reflect on page
-                savedImpressions.forEach { imp ->
-                    viewModel.createPlacemark(
-                        Point(imp.latitude!!, imp.longitude!!)
-                    )
-                }
+            onStartImpCreation = { lat, lon ->
+                navController.navigate(
+                    "impression_addition/${lat}/${lon}"
+                )
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -200,13 +196,13 @@ private const val ZOOM_STEP = 1f
 
 @Composable
 fun MapControls(
-    navController: NavController,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onCreatePlacemark: () -> Unit,
     onRejectPlaceMark: () -> Unit,
-    onStartImpCreation: () -> Unit,
-    modifier: Modifier = Modifier
+    onStartImpCreation: (Float, Float) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: MapViewModel = hiltViewModel()
 ) {
     var selectPointMode by remember {mutableStateOf(false)}
 
@@ -252,7 +248,10 @@ fun MapControls(
             } else {
                 // Confirm selected point or not
                 FloatingActionButton(
-                    onClick = { onStartImpCreation() },
+                    onClick = { onStartImpCreation(
+                        viewModel.getCameraPositionTarget().latitude.toFloat(),
+                        viewModel.getCameraPositionTarget().longitude.toFloat()
+                    ) },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(

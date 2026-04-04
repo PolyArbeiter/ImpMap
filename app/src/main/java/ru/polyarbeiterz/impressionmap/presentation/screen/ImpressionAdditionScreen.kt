@@ -46,7 +46,7 @@ import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @Composable
-fun ImpressionAdditionScreen(navController: NavController) {
+fun ImpressionAdditionScreen(navController: NavController, latitude: Double?, longituted: Double?) {
     ImpressionMapTheme {
         Scaffold(
             topBar = { TopBar() },
@@ -56,6 +56,9 @@ fun ImpressionAdditionScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 ImpressionAdditionMenu(
+                    navController,
+                    latitude = latitude,
+                    longituted = longituted,
                     modifier = Modifier.padding(8.dp)
                 )
             }
@@ -94,7 +97,10 @@ fun DatePickerModal(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImpressionAdditionMenu(
+    navController: NavController,
     modifier: Modifier = Modifier,
+    latitude: Double?,
+    longituted: Double?,
     impAdditionModel: ImpressionAdditionModel = hiltViewModel()
 ) {
     var checkedSaveLocally by remember { mutableStateOf(true) }
@@ -173,11 +179,15 @@ fun ImpressionAdditionMenu(
                 impAdditionModel.viewModelScope.launch {
                     impAdditionModel.impService.insertAll(
                         Impression(
-                            latitude = 60.012750,
-                            longitude = 30.395935,
+                            latitude = latitude,
+                            longitude = longituted,
+                            description = textFieldDescription,
+                            onServer = checkedSendToServer,
+                            onLocalhost = checkedSaveLocally
                         )
                     )
                 }
+                navController.navigate("map_screen")
             }) {
                 Text(text="Сохранить")
             }
@@ -209,9 +219,9 @@ fun ImpressionAdditionMenuPreview() {
                     modifier = Modifier.padding(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    ImpressionAdditionMenu(
-                        modifier = Modifier.padding(8.dp)
-                    )
+//                    ImpressionAdditionMenu(
+//                        modifier = Modifier.padding(8.dp)
+//                    )
                 }
             }
     }

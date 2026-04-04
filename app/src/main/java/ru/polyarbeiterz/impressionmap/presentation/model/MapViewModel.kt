@@ -86,12 +86,15 @@ class MapViewModel @Inject constructor(
             setIcon(
                 ImageProvider.fromResource(
                     context,
-                    R.drawable.ic_dollar_pin
+                    R.drawable.marker_down
                 ),
                 IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
             isDraggable = true
         }
     }
+
+    fun getCameraPositionTarget() = getMap()!!.cameraPosition.target
+
     private fun moveMapToLocation(location: Location) {
         val mapView = _uiState.value.mapView
         if (mapView != null) {

@@ -41,9 +41,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.AndroidEntryPoint
 import ru.polyarbeiterz.impressionmap.BuildConfig
@@ -96,8 +98,15 @@ fun AppNavigation(context: Context) {
             MapComposable(navController)
         }
 
-        composable("impression_addition") {
-            ImpressionAdditionScreen(navController)
+        composable("impression_addition/{lat}/{lon}",
+            arguments = listOf(
+                navArgument("lat") { type = NavType.FloatType },
+                navArgument("lon") { type = NavType.FloatType }
+            )
+        ) { backStackEntry ->
+            val lat = backStackEntry.arguments?.getFloat("lat") ?: 0.0
+            val lon = backStackEntry.arguments?.getFloat("lon") ?: 0.0
+            ImpressionAdditionScreen(navController, lat.toDouble(), lon.toDouble())
         }
     }
 }
@@ -161,7 +170,11 @@ fun ChoiceButton(navController: NavController, modifier: Modifier = Modifier, co
 }
 
 @Composable
-fun ChoiceDialog(navController: NavController, showModal: Boolean, context: Context, onDismissRequest: () -> Unit) {
+fun ChoiceDialog(
+    navController: NavController,
+    showModal: Boolean,
+    context: Context, onDismissRequest: () -> Unit
+) {
     var serverList by remember { mutableStateOf(listOf<Server>()) }
     var showAdditionModal by remember { mutableStateOf(false) }
 
