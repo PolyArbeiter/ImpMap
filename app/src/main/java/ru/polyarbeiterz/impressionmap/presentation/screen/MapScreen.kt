@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,7 +17,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -49,7 +47,6 @@ import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.logic.filterAndSaveImpressionsWithCoords
@@ -61,17 +58,10 @@ import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 @Composable
 fun MapComposable(navController: NavController) {
     ImpressionMapTheme {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = { MainTopBar(navController) },
-            bottomBar = { MainBottomBar(navController) }
-        ) { innerPadding ->
-            MapInteractionScreen(
-                navController,
-                LocalContext.current,
-                modifier = Modifier.padding(innerPadding)
-            )
-        }
+        MapInteractionScreen(
+            navController,
+            LocalContext.current,
+        )
     }
 }
 
@@ -79,8 +69,8 @@ fun MapComposable(navController: NavController) {
 @Composable
 fun MapInteractionScreen(
     navController: NavController,
-    context: Context, modifier:
-    Modifier = Modifier,
+    context: Context,
+    modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel()
 ) {
 
@@ -99,8 +89,6 @@ fun MapInteractionScreen(
     }
 
     LaunchedEffect(Unit) {
-//        while (true) {
-//            delay(2000)
         viewModel.viewModelScope.launch {
             // get all impressions with coords from local database
             viewModel.impressionService.getAll()
@@ -116,7 +104,6 @@ fun MapInteractionScreen(
                     )
                 }
         }
-
     }
 
     LaunchedEffect(savedImpressionLocals.size) {
@@ -156,7 +143,7 @@ fun MapInteractionScreen(
                     }
                 }
             },
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier,
             update = { view -> }
         )
 
@@ -223,7 +210,14 @@ fun MapInteractionScreen(
                         }
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize()
+        )
+        MainTopBar(navController, modifier = modifier.align(Alignment.TopCenter))
+        MainBottomBar(
+            navController,
+            modifier = modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 15.dp)
         )
     }
 }
@@ -319,21 +313,27 @@ fun MapControls(
 }
 
 @Composable
-fun MainTopBar(navController: NavController, viewModel: MapViewModel = hiltViewModel()) {
+fun MainTopBar(
+    navController: NavController,
+    modifier: Modifier,
+    viewModel: MapViewModel = hiltViewModel()
+) {
     val isLoading by viewModel.isLoadingLocation.collectAsState()
 
     Row(
-        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(top = 25.dp)
+        verticalAlignment = Alignment.Top,
+        modifier = modifier.fillMaxSize().padding(top=25.dp)
     ) {
-        Icon(
-            painter = painterResource(R.drawable.baseline_settings_24),
-            contentDescription = null
-        )
+        Button(
+            onClick = { viewModel.fetchCurrentLocation() },
+            enabled = !isLoading
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.baseline_settings_24),
+                contentDescription = null
+            )
+        }
         Button(onClick = {}) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -369,15 +369,14 @@ fun MainTopBar(navController: NavController, viewModel: MapViewModel = hiltViewM
             }
         }
     }
+
 }
 
 @Composable
-fun MainBottomBar(navController: NavController) {
+fun MainBottomBar(navController: NavController, modifier: Modifier) {
     Surface(
-        color = Color.LightGray,
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .padding(bottom = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -409,22 +408,3 @@ private val START_ANIMATION = Animation(Animation.Type.LINEAR, 1f)
 private val SMOOTH_ANIMATION = Animation(Animation.Type.SMOOTH, 0.4f)
 private val START_POSITION = CameraPosition(Point(54.707590, 20.508898), 15f, 0f, 0f)
 
-
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    ImpressionMapTheme {
-////        MainBottomBar()
-//
-//        ImpressionMapTheme {
-//            Scaffold(
-//                modifier = Modifier.fillMaxSize(),
-//                topBar = { MainTopBar({}) },
-//                bottomBar = { MainBottomBar() }) { innerPadding ->
-//                // Won't work in preview - no full init.
-//                MapInteractionScreen(modifier = Modifier.padding(innerPadding))
-//
-//            }
-//        }
-//    }
-//}
