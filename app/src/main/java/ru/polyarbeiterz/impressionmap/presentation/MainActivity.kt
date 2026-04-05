@@ -52,7 +52,6 @@ import androidx.navigation.navArgument
 import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
@@ -108,7 +107,11 @@ fun AppNavigation(context: Context) {
         ) { backStackEntry ->
             val lat = backStackEntry.arguments?.getFloat("lat") ?: 0.0
             val lon = backStackEntry.arguments?.getFloat("lon") ?: 0.0
-            ImpressionAdditionScreen(navController, lat.toDouble(), lon.toDouble())
+            ImpressionAdditionScreen(
+                navController,
+                lat.toFloat(),
+                lon.toFloat()
+            )
         }
     }
 }
@@ -195,7 +198,7 @@ fun ChoiceDialog(
         onAddition = { server: Host ->
             // add and update serverList
             mainActivityModel.viewModelScope.launch {
-                runBlocking { mainActivityModel.insertHost(server) }
+                mainActivityModel.insertHost(server)
                 mainActivityModel.hostService.getAll()
                     .filter { !serverList.contains(it) }
                     .forEach { serverList.add(it) }

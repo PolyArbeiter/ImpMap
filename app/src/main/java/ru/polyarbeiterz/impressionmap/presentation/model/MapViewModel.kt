@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.core.logic.ImpressionSynchronizer
+import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.LocationService
 import javax.inject.Inject
@@ -33,7 +35,9 @@ data class MapUiState(
 class MapViewModel @Inject constructor(
     @ApplicationContext val context: Context,
     val locationService: LocationService,
-    val impressionService: ImpressionService
+    val impressionService: ImpressionService,
+    val retrofitService: ImpressionBackendService,
+    val synchronizerService: ImpressionSynchronizer
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()

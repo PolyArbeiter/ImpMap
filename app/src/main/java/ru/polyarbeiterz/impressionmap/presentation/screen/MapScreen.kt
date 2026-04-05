@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +49,12 @@ import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
-import ru.polyarbeiterz.impressionmap.data.entity.Impression
+import ru.polyarbeiterz.impressionmap.core.logic.filterAndSaveImpressionsWithCoords
+import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
@@ -84,13 +88,43 @@ fun MapInteractionScreen(
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
 
-    val savedImpressions = remember {
-        mutableStateSetOf<Impression>()
+    val savedImpressionLocals = remember {
+        mutableStateSetOf<ImpressionLocal>()
     }
 
     DisposableEffect(Unit) {
         onDispose {
             uiState.mapView?.onStop()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+//        while (true) {
+//            delay(2000)
+        viewModel.viewModelScope.launch {
+            // get all impressions with coords from local database
+            viewModel.impressionService.getAll()
+                .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
+
+            // get remote impressions and sync with them
+            viewModel.retrofitService.getAllImpressions()
+                .takeIf { it.isSuccessful }
+                .apply {
+                    viewModel.synchronizerService.synchronize(
+                        savedImpressionLocals.map { it.toServerDto() },
+                        this?.body() ?: emptyList()
+                    )
+                }
+        }
+
+    }
+
+    LaunchedEffect(savedImpressionLocals.size) {
+        // reflect all placemarks
+        savedImpressionLocals.forEach { imp ->
+            viewModel.createPlacemark(
+                Point(imp.latitude!!.toDouble(), imp.longitude!!.toDouble())
+            )
         }
     }
 
@@ -119,22 +153,6 @@ fun MapInteractionScreen(
                             START_ANIMATION,
                             null
                         )
-                    }
-
-                    // relfect all placemarks with coords (dirty)
-                    viewModel.viewModelScope.launch {
-                        viewModel.impressionService.getAll()
-                            .filter {
-                                    imp -> imp.longitude != null &&
-                                    imp.latitude != null &&
-                                    !savedImpressions.contains(imp)
-                            }
-                            .forEach { imp ->
-                                savedImpressions.add(imp)
-                                viewModel.createPlacemark(
-                                    Point(imp.latitude!!, imp.longitude!!)
-                                )
-                            }
                     }
                 }
             },
@@ -188,6 +206,23 @@ fun MapInteractionScreen(
                     "impression_addition/${lat}/${lon}"
                 )
             },
+            onUpdateImpressions = {
+                viewModel.viewModelScope.launch {
+                    // get all impressions with coords from local database
+                    viewModel.impressionService.getAll()
+                        .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
+
+                    // get remote impressions and sync with them
+                    viewModel.retrofitService.getAllImpressions()
+                        .takeIf { it.isSuccessful }
+                        .apply {
+                            viewModel.synchronizerService.synchronize(
+                                savedImpressionLocals.map { it.toServerDto() },
+                                this?.body() ?: emptyList()
+                            )
+                        }
+                }
+            },
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -201,6 +236,7 @@ fun MapControls(
     onCreatePlacemark: () -> Unit,
     onRejectPlaceMark: () -> Unit,
     onStartImpCreation: (Float, Float) -> Unit,
+    onUpdateImpressions: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel()
 ) {
@@ -242,6 +278,15 @@ fun MapControls(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.new_box),
+                        contentDescription = null,
+                    )
+                }
+                FloatingActionButton(
+                    onClick = onUpdateImpressions,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.update),
                         contentDescription = null,
                     )
                 }

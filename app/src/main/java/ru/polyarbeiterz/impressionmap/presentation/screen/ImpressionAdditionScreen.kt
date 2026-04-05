@@ -41,12 +41,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
-import ru.polyarbeiterz.impressionmap.data.entity.Impression
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @Composable
-fun ImpressionAdditionScreen(navController: NavController, latitude: Double?, longituted: Double?) {
+fun ImpressionAdditionScreen(navController: NavController, latitude: Float?, longituted: Float?) {
     ImpressionMapTheme {
         Scaffold(
             topBar = { TopBar() },
@@ -99,8 +99,8 @@ fun DatePickerModal(
 fun ImpressionAdditionMenu(
     navController: NavController,
     modifier: Modifier = Modifier,
-    latitude: Double?,
-    longituted: Double?,
+    latitude: Float?,
+    longituted: Float?,
     impAdditionModel: ImpressionAdditionModel = hiltViewModel()
 ) {
     var checkedSaveLocally by remember { mutableStateOf(true) }
@@ -129,13 +129,6 @@ fun ImpressionAdditionMenu(
 
         }
         //TODO() Добавить DatePicker
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Сохранить на устройстве")
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(checked = checkedSaveLocally, onCheckedChange = {
-                checkedSaveLocally = it
-            })
-        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Поделиться на сервере")
             Spacer(modifier = Modifier.weight(1f))
@@ -178,12 +171,11 @@ fun ImpressionAdditionMenu(
             Button(onClick = {
                 impAdditionModel.viewModelScope.launch {
                     impAdditionModel.impService.insertAll(
-                        Impression(
+                        ImpressionLocal(
                             latitude = latitude,
                             longitude = longituted,
                             description = textFieldDescription,
                             onServer = checkedSendToServer,
-                            onLocalhost = checkedSaveLocally
                         )
                     )
                 }

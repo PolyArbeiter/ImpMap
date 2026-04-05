@@ -4,19 +4,19 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
-import ru.polyarbeiterz.impressionmap.data.entity.Impression
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 
 @Dao
 interface ImpressionDao {
-    @Query("SELECT * FROM impression")
-    suspend fun getAll(): List<Impression>
+    @Query("SELECT * FROM impressionlocal")
+    suspend fun getAll(): List<ImpressionLocal>
 
-    @Query("SELECT * FROM impression WHERE id in (:impressionIds)")
-    suspend fun loadAllByIds(impressionIds: IntArray): List<Impression>
+    @Query("SELECT * FROM impressionlocal WHERE id in (:impressionIds)")
+    suspend fun loadAllByIds(impressionIds: IntArray): List<ImpressionLocal>
 
     @Insert
-    suspend fun insertAll(vararg impressions: Impression)
+    suspend fun insertAll(vararg impressionLocals: ImpressionLocal)
 
     @Delete
-    suspend fun delete(impression: Impression)
+    suspend fun delete(impressionLocal: ImpressionLocal)
 }

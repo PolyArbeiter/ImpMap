@@ -7,11 +7,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import ru.polyarbeiterz.impressionmap.data.dao.HostDao
 import ru.polyarbeiterz.impressionmap.data.dao.ImpressionDao
 import ru.polyarbeiterz.impressionmap.data.entity.Host
-import ru.polyarbeiterz.impressionmap.data.entity.Impression
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 
 @Database(
-    entities = [Impression::class, Host::class],
-    version = 2,
+    entities = [ImpressionLocal::class, Host::class],
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
