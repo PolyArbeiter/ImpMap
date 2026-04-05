@@ -17,7 +17,7 @@ interface ImpressionBackendService {
         "Content-Type: Application/Json;charset=UTF-8",
         "Accept: Application/Json",
         "User-Agent: Retrofit 2.9.0",
-        "Authorization: Basic bWF0dmV5OjE="
+        "Authorization: Basic dXNlcjE6dXNlcjEyMw=="
     ] )
     suspend fun getAllImpressions(): Response<List<ImpressionDto>>
 
@@ -30,7 +30,7 @@ interface ImpressionBackendService {
         "Content-Type: Application/Json;charset=UTF-8",
         "Accept: Application/Json",
         "User-Agent: Retrofit 2.9.0",
-        "Authorization: Basic bWF0dmV5OjE="
+        "Authorization: Basic dXNlcjE6dXNlcjEyMw=="
     ] )
     suspend fun createImpression(@Body impressionDto: ImpressionDto): Response<ImpressionDto>
 }

@@ -170,7 +170,7 @@ fun ImpressionAdditionMenu(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(onClick = {
                 impAdditionModel.viewModelScope.launch {
-                    impAdditionModel.impService.insertAll(
+                    impAdditionModel.insertImp(
                         ImpressionLocal(
                             latitude = latitude,
                             longitude = longituted,

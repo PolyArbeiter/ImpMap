@@ -2,6 +2,7 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
 import android.graphics.PointF
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -373,7 +374,7 @@ fun MainTopBar(
 }
 
 @Composable
-fun MainBottomBar(navController: NavController, modifier: Modifier) {
+fun MainBottomBar(navController: NavController, modifier: Modifier){
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -383,6 +384,7 @@ fun MainBottomBar(navController: NavController, modifier: Modifier) {
                 modifier = Modifier
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = { navController.navigate("map_screen") })
             ) {
                 Text(
                     text = "Карта",
@@ -394,6 +396,7 @@ fun MainBottomBar(navController: NavController, modifier: Modifier) {
                 modifier = Modifier
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = {navController.navigate("impression_list")})
             ) {
                 Text(
                     text = "Список",

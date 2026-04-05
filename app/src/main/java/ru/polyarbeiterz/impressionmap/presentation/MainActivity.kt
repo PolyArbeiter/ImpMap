@@ -56,6 +56,7 @@ import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
 import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionAdditionScreen
+import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionListComposable
 import ru.polyarbeiterz.impressionmap.presentation.screen.MapComposable
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
@@ -112,6 +113,9 @@ fun AppNavigation(context: Context) {
                 lat.toFloat(),
                 lon.toFloat()
             )
+        }
+        composable("impression_list") {
+            ImpressionListComposable(navController)
         }
     }
 }

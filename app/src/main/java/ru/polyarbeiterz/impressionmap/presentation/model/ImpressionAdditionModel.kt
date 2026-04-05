@@ -1,20 +1,20 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import javax.inject.Inject
 
 @HiltViewModel
 class ImpressionAdditionModel @Inject constructor(
-    val impService: ImpressionService
+    val impressionService: ImpressionService
 ) : ViewModel() {
-    fun insertImp(imp: ImpressionLocal) {
-        viewModelScope.launch {
-            impService.insertAll(imp)
-        }
+    suspend fun insertImp(imp: ImpressionLocal) {
+        impressionService.insertAll(imp)
+    }
+
+    suspend fun getAllImpressions(): List<ImpressionLocal> {
+        return impressionService.getAll()
     }
 }
