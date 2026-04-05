@@ -1,11 +1,17 @@
 package ru.polyarbeiterz.impressionmap.presentation
 
+import android.Manifest
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -23,17 +30,19 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +87,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         MapKitFactory.getInstance().onStart()
     }
+
     override fun onStop() {
         MapKitFactory.getInstance().onStop()
         super.onStop()
@@ -100,7 +110,8 @@ fun AppNavigation(context: Context) {
             MapComposable(navController)
         }
 
-        composable("impression_addition/{lat}/{lon}",
+        composable(
+            "impression_addition/{lat}/{lon}",
             arguments = listOf(
                 navArgument("lat") { type = NavType.FloatType },
                 navArgument("lon") { type = NavType.FloatType }
@@ -132,7 +143,11 @@ fun ChoiceScreen(
             modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
         ) {
             Box(modifier = modifier.fillMaxSize()) {
-                ChoiceButton(navController, modifier = Modifier.align(Alignment.Center), context = context)
+                ChoiceButton(
+                    navController,
+                    modifier = Modifier.align(Alignment.Center),
+                    context = context
+                )
             }
         }
     }
@@ -182,18 +197,55 @@ fun ChoiceButton(navController: NavController, modifier: Modifier = Modifier, co
 fun ChoiceDialog(
     navController: NavController,
     showModal: Boolean,
-    context: Context, onDismissRequest: () -> Unit,
+    context: Context,
+    onDismissRequest: () -> Unit,
     mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
-    val serverList = remember { mutableStateSetOf<Host>() }
+    val serverList by mainActivityModel.allHosts.collectAsState()
+    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = null)
     var showAdditionModal by remember { mutableStateOf(false) }
+    var hostToDelete by remember { mutableStateOf<Host?>(null) }
 
-    LaunchedEffect(Unit) {
-        serverList.clear()
-        mainActivityModel.hostService.getAll()
-            .forEach { host ->
-                serverList.add(host)
+    var locationPermissionGranted by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLocationPermissionLauncher(
+        onPermissionGranted = {
+            locationPermissionGranted = true
+            Log.d("Permission", "Геолокация разрешена")
+            navController.navigate("map_screen")
+        },
+        onPermissionDenied = {
+            locationPermissionGranted = false
+            Log.d("Permission", "Геолокация запрещена")
+            navController.navigate("map_screen")
+        }
+    )
+
+    if (hostToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { hostToDelete = null },
+            title = { Text("Удалить сервер?") },
+            text = { Text("Вы уверены, что хотите удалить \"${hostToDelete?.name}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        mainActivityModel.deleteHost(hostToDelete!!)
+                        hostToDelete = null
+                    }
+                ) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        hostToDelete = null
+                    }
+                ) {
+                    Text("Отмена")
+                }
             }
+        )
     }
 
     ServerAdditionDialog(
@@ -203,12 +255,12 @@ fun ChoiceDialog(
             // add and update serverList
             mainActivityModel.viewModelScope.launch {
                 mainActivityModel.insertHost(server)
-                mainActivityModel.hostService.getAll()
-                    .filter { !serverList.contains(it) }
-                    .forEach { serverList.add(it) }
             }
             showAdditionModal = false
-        })
+        },
+        isValidIp = mainActivityModel::isValidIp,
+        isValidPort = mainActivityModel::isValidPort
+    )
 
     if (showModal) Dialog({ onDismissRequest() }) {
         Card(
@@ -222,21 +274,28 @@ fun ChoiceDialog(
                 modifier = Modifier.padding(16.dp)
             ) {
                 LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = Modifier.height(500.dp)) {
-                    item {
+                    item(key = "local_mode") {
                         ChoiceCard(
                             cardName = "Ваше устройство",
                             cardDescription = "Данные сохранены локально",
-                            onClick = {},
-                            chosen = true
+                            onClick = { mainActivityModel.selectLocalMode() },
+                            onLongPress = {},
+                            chosen = selectedHost?.ip == "127.0.0.1" && selectedHost?.port == -1
                         )
                     }
-                    items(serverList.size) { index ->
+                    items(
+                        serverList.size,
+                        key = { index ->
+                            "${serverList[index].ip}:${serverList[index].port}"
+                        }
+                    ) { index ->
                         val el = serverList.elementAt(index)
                         ChoiceCard(
                             cardName = el.name ?: "Нет имени",
                             cardDescription = "IP: " + el.ip + ", порт: " + el.port,
-                            onClick = {},
-                            chosen = false
+                            onClick = { mainActivityModel.selectHost(el) },
+                            onLongPress = { hostToDelete = el },
+                            chosen = selectedHost?.ip == el.ip && selectedHost?.port == el.port
                         )
                     }
                 }
@@ -245,8 +304,18 @@ fun ChoiceDialog(
                     Text(text = "Добавить сервер")
                 }
                 Button(
-                    modifier = Modifier.fillMaxWidth(), onClick = {
-                        navController.navigate("map_screen")
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedHost != null,
+                    onClick = {
+                        if (selectedHost?.ip != "127.0.0.1" && selectedHost?.port != -1)
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                        else
+                            navController.navigate("map_screen")
                     }) { Text(text = "Продолжить") }
             }
         }
@@ -259,15 +328,27 @@ fun ChoiceCard(
     cardName: String,
     cardDescription: String,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
     chosen: Boolean
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     OutlinedCard(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .fillMaxWidth()
             .padding(4.dp)
             .clip(shape = RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
+            .indication(
+                interactionSource = interactionSource,
+                indication = ripple()
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress() }
+                )
+            }
     ) {
         Surface(
             color = if (chosen) MaterialTheme.colorScheme.primaryContainer
@@ -307,7 +388,9 @@ fun ServerAdditionDialog(
     showModal: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onAddition: (server: Host) -> Unit
+    onAddition: (server: Host) -> Unit,
+    isValidIp: (String) -> Boolean,
+    isValidPort: (Int) -> Boolean
 ) {
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -337,18 +420,37 @@ fun ServerAdditionDialog(
                             value = name,
                             label = { Text(text = "Имя сервера") },
                             onValueChange = { name = it },
+                            supportingText = {
+                                if (name.isNotEmpty() && name.length in 10..20) {
+                                    Text("Хорошее название", color = Color.White)
+                                } else if (name.isNotEmpty() && name.length > 20) {
+                                    Text("Хватит", color = Color.White)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = address,
                             label = { Text(text = "IP-адрес") },
                             onValueChange = { address = it },
+                            isError = address.isNotEmpty() && !isValidIp(address),
+                            supportingText = {
+                                if (address.isNotEmpty() && !isValidIp(address)) {
+                                    Text("Неверный формат IP", color = Color.Red)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = port,
                             label = { Text(text = "Порт") },
                             onValueChange = { port = it },
+                            isError = port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0),
+                            supportingText = {
+                                if (port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0)) {
+                                    Text("Неверный номер порта", color = Color.Red)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -362,7 +464,11 @@ fun ServerAdditionDialog(
                             name = ""
                             address = ""
                             port = ""
-                        }, modifier = Modifier.fillMaxWidth()
+                        },
+                        enabled = (address.isNotEmpty() && isValidIp(address)) && (port.isNotEmpty() && isValidPort(
+                            port.toIntOrNull() ?: 0
+                        )),
+                        modifier = Modifier.fillMaxWidth()
                     ) { Text(text = "Добавить") }
                     Button(
                         onClick = { onDismissRequest() }, modifier = Modifier.fillMaxWidth()
@@ -372,6 +478,23 @@ fun ServerAdditionDialog(
         }
     }
 }
+
+@Composable
+fun rememberLocationPermissionLauncher(
+    onPermissionGranted: () -> Unit,
+    onPermissionDenied: () -> Unit
+) =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineLocationGranted || coarseLocationGranted) {
+            onPermissionGranted()
+        } else {
+            onPermissionDenied()
+        }
+    }
 
 @Preview(showBackground = true)
 @Composable

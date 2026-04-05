@@ -1,20 +1,93 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.datastore.preferences.core.edit
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
+import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.data.service.HostService
 import javax.inject.Inject
 
 @HiltViewModel
 class MainActivityModel @Inject constructor(
-    val hostService: HostService
-) : ViewModel() {
-    fun insertHost(host: Host) {
+    val hostService: HostService,
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val context = getApplication<Application>()
+    val allHosts: StateFlow<List<Host>> = hostService.getAll()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val selectedHost: Flow<Host> = context.dataStore.data
+        .map { preferences ->
+            Host(
+                name = preferences[PreferencesKeys.SELECTED_HOST_NAME],
+                ip = preferences[PreferencesKeys.SELECTED_HOST_IP],
+                port = preferences[PreferencesKeys.SELECTED_HOST_PORT]
+            )
+        }
+
+    fun selectHost(host: Host) {
+        viewModelScope.launch {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.SELECTED_HOST_NAME] = host.name ?: ""
+                preferences[PreferencesKeys.SELECTED_HOST_IP] = host.ip ?: ""
+                preferences[PreferencesKeys.SELECTED_HOST_PORT] = host.port ?: -1
+            }
+        }
+    }
+
+    fun selectLocalMode() {
+        viewModelScope.launch {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.SELECTED_HOST_IP] = "127.0.0.1"
+                preferences[PreferencesKeys.SELECTED_HOST_PORT] = -1
+            }
+        }
+    }
+
+    fun insertHost(host: Host): Boolean {
+
+        if (host.ip.isNullOrBlank() || host.port == null) {
+            return false
+        }
+
+        if (!isValidIp(host.ip)) return false
+        if (!isValidPort(host.port)) return false
+
         viewModelScope.launch {
             hostService.insertAll(host)
+        }
+        return true
+    }
+
+    fun isValidIp(ip: String): Boolean {
+        val ipPattern = Regex("""^(\d{1,3}\.){3}\d{1,3}$""")
+        return ipPattern.matches(ip) &&
+                ip.split(".").all { it.toIntOrNull() in 0..255 }
+    }
+
+    fun isValidPort(port: Int): Boolean {
+        return port in 1..65535
+    }
+
+    fun deleteHost(host: Host) {
+        viewModelScope.launch {
+            hostService.deleteAll(host)
+            if (host.name == selectedHost.firstOrNull()?.name &&
+                host.ip == selectedHost.firstOrNull()?.ip &&
+                host.port == selectedHost.firstOrNull()?.port)
+                selectLocalMode()
         }
     }
 }

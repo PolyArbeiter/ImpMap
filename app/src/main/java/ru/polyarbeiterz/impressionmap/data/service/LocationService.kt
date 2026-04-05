@@ -14,7 +14,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 
 class LocationService @Inject constructor(
-    @ApplicationContext val context: Context
+    @param:ApplicationContext val context: Context
 ) {
     private val fusedLocationClient: FusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(context)

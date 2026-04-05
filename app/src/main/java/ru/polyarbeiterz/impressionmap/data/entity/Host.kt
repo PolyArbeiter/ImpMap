@@ -2,9 +2,15 @@ package ru.polyarbeiterz.impressionmap.data.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity(
+    tableName = "host",
+    indices = [
+        Index(value = ["ip", "port"], unique = true)
+    ]
+)
 data class Host(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "name") val name: String? = null,

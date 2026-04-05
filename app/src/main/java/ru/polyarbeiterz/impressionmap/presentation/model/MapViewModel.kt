@@ -33,7 +33,7 @@ data class MapUiState(
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    @ApplicationContext val context: Context,
+    @param:ApplicationContext val context: Context,
     val locationService: LocationService,
     val impressionService: ImpressionService,
     val retrofitService: ImpressionBackendService,

@@ -2,6 +2,7 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
 import android.graphics.PointF
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,8 +10,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,6 +78,10 @@ fun MapInteractionScreen(
     viewModel: MapViewModel = hiltViewModel()
 ) {
 
+    BackHandler(enabled = true) {
+        // Кнопка "назад" пока просто игнорируется, чтобы нельзя было перейти обратно на меню выбора
+    }
+
     val uiState by viewModel.uiState.collectAsState()
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
@@ -126,7 +133,7 @@ fun MapInteractionScreen(
                     val mapWindow = this.mapWindow
 
                     mapWindow.addSizeChangedListener(
-                         {_, _, _ -> viewModel.updateFocusInfo()}
+                        { _, _, _ -> viewModel.updateFocusInfo() }
                     )
                     viewModel.updateFocusInfo()
 
@@ -135,7 +142,8 @@ fun MapInteractionScreen(
                         val loc = viewModel.locationService.getCurrentLocation()
                         val point = Point(
                             loc?.latitude ?: START_POSITION.target.latitude,
-                            loc?.latitude ?: START_POSITION.target.latitude)
+                            loc?.latitude ?: START_POSITION.target.latitude
+                        )
                         map.move(
                             CameraPosition(point, 15f, 0f, 0f),
                             START_ANIMATION,
@@ -174,10 +182,13 @@ fun MapInteractionScreen(
                 placemarkMapObject = placemarkMapObject.apply {
                     // move and existing placemark
                     placemarkMapObject?.setVisible(true)
-                    val focusPoint = viewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
-                    val point = viewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint) ?: return@apply
+                    val focusPoint =
+                        viewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
+                    val point =
+                        viewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint)
+                            ?: return@apply
                     placemarkMapObject?.geometry = point
-                } ?:viewModel.getMap()!!.mapObjects.addPlacemark().apply {
+                } ?: viewModel.getMap()!!.mapObjects.addPlacemark().apply {
                     // create placemark if null
                     geometry = viewModel.getMap()!!.cameraPosition.target
                     setIcon(
@@ -187,7 +198,7 @@ fun MapInteractionScreen(
                 }
             },
             onRejectPlaceMark = {
-              placemarkMapObject?.setVisible(false)
+                placemarkMapObject?.setVisible(false)
             },
             onStartImpCreation = { lat, lon ->
                 navController.navigate(
@@ -213,15 +224,22 @@ fun MapInteractionScreen(
             },
             modifier = modifier.fillMaxSize()
         )
-        MainTopBar(navController, modifier = modifier.align(Alignment.TopCenter))
+        MainTopBar(navController,
+            modifier = modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp)
+                .padding(horizontal = 8.dp)
+                .statusBarsPadding()
+        )
         MainBottomBar(
             navController,
             modifier = modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 15.dp)
+                .navigationBarsPadding()
         )
     }
 }
+
 private const val ZOOM_STEP = 1f
 
 @Composable
@@ -235,7 +253,7 @@ fun MapControls(
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel()
 ) {
-    var selectPointMode by remember {mutableStateOf(false)}
+    var selectPointMode by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         // Zoom Controls - Right side
@@ -288,10 +306,12 @@ fun MapControls(
             } else {
                 // Confirm selected point or not
                 FloatingActionButton(
-                    onClick = { onStartImpCreation(
-                        viewModel.getCameraPositionTarget().latitude.toFloat(),
-                        viewModel.getCameraPositionTarget().longitude.toFloat()
-                    ) },
+                    onClick = {
+                        onStartImpCreation(
+                            viewModel.getCameraPositionTarget().latitude.toFloat(),
+                            viewModel.getCameraPositionTarget().longitude.toFloat()
+                        )
+                    },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
@@ -324,7 +344,8 @@ fun MainTopBar(
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
-        modifier = modifier.fillMaxSize().padding(top=25.dp)
+        modifier = modifier
+            .fillMaxSize()
     ) {
         Button(
             onClick = { viewModel.fetchCurrentLocation() },
@@ -374,7 +395,7 @@ fun MainTopBar(
 }
 
 @Composable
-fun MainBottomBar(navController: NavController, modifier: Modifier){
+fun MainBottomBar(navController: NavController, modifier: Modifier) {
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -396,7 +417,7 @@ fun MainBottomBar(navController: NavController, modifier: Modifier){
                 modifier = Modifier
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = {navController.navigate("impression_list")})
+                    .clickable(onClick = { navController.navigate("impression_list") })
             ) {
                 Text(
                     text = "Список",
