@@ -4,15 +4,16 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 
 @Dao
 interface ImpressionDao {
     @Query("SELECT * FROM impressionlocal")
-    suspend fun getAll(): List<ImpressionLocal>
+    fun getAll(): Flow<List<ImpressionLocal>>
 
     @Query("SELECT * FROM impressionlocal WHERE id in (:impressionIds)")
-    suspend fun loadAllByIds(impressionIds: IntArray): List<ImpressionLocal>
+    fun loadAllByIds(impressionIds: IntArray): Flow<List<ImpressionLocal>>
 
     @Insert
     suspend fun insertAll(vararg impressionLocals: ImpressionLocal)

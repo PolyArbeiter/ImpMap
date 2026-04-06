@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -87,9 +88,7 @@ fun MapInteractionScreen(
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
 
-    val savedImpressionLocals = remember {
-        mutableStateSetOf<ImpressionLocal>()
-    }
+    val impressionsList = viewModel.allImpressions.collectAsState().value
 
     DisposableEffect(Unit) {
         onDispose {
@@ -99,17 +98,13 @@ fun MapInteractionScreen(
 
     LaunchedEffect(Unit) {
         viewModel.viewModelScope.launch {
-            // get all impressions with coords from local database
-            viewModel.impressionService.getAll()
-                .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
-
             // get remote impressions and sync with them
             try {
                 viewModel.retrofitService.getAllImpressions()
                     .takeIf { it.isSuccessful }
                     .apply {
                         viewModel.synchronizerService.synchronize(
-                            savedImpressionLocals.map { it.toServerDto() },
+                            impressionsList.map { it.toServerDto() },
                             this?.body() ?: emptyList()
                         )
                     }
@@ -119,9 +114,9 @@ fun MapInteractionScreen(
         }
     }
 
-    LaunchedEffect(savedImpressionLocals.size) {
+    LaunchedEffect(impressionsList.size) {
         // reflect all placemarks
-        savedImpressionLocals.forEach { imp ->
+        impressionsList.forEach { imp ->
             viewModel.createPlacemark(
                 Point(imp.latitude!!.toDouble(), imp.longitude!!.toDouble())
             )
@@ -212,17 +207,13 @@ fun MapInteractionScreen(
             },
             onUpdateImpressions = {
                 viewModel.viewModelScope.launch {
-                    // get all impressions with coords from local database
-                    viewModel.impressionService.getAll()
-                        .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
-
                     // get remote impressions and sync with them
                     try {
                         viewModel.retrofitService.getAllImpressions()
                             .takeIf { it.isSuccessful }
                             .apply {
                                 viewModel.synchronizerService.synchronize(
-                                    savedImpressionLocals.map { it.toServerDto() },
+                                    impressionsList.map { it.toServerDto() },
                                     this?.body() ?: emptyList()
                                 )
                             }
@@ -240,8 +231,11 @@ fun MapInteractionScreen(
                 .padding(horizontal = 8.dp)
                 .statusBarsPadding()
         )
-        MainBottomBar(
-            navController,
+        BottomNavBar(
+            textLeft = "Карта",
+            textRight = "Список",
+            onClickLeft = {},
+            onClickRight = { navController.navigate("impression_list_screen") },
             modifier = modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -354,12 +348,9 @@ fun MainTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
     ) {
-        Button(
-            onClick = { viewModel.fetchCurrentLocation() },
-            enabled = !isLoading
-        ) {
+        Button(onClick = {}) {
             Icon(
                 painter = painterResource(R.drawable.baseline_settings_24),
                 contentDescription = null
@@ -372,7 +363,7 @@ fun MainTopBar(
                     contentDescription = null
                 )
                 Text(text = "Фильтр", modifier = Modifier.padding(horizontal = 12.dp))
-                Surface(color = Color.Blue, modifier = Modifier.clip(CircleShape)) {
+                Surface(color = Color.White, modifier = Modifier.clip(CircleShape)) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -404,7 +395,13 @@ fun MainTopBar(
 }
 
 @Composable
-fun MainBottomBar(navController: NavController, modifier: Modifier) {
+fun BottomNavBar(
+    textLeft: String,
+    textRight: String,
+    onClickLeft: () -> Unit,
+    onClickRight: () -> Unit,
+    modifier: Modifier
+) {
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -414,10 +411,10 @@ fun MainBottomBar(navController: NavController, modifier: Modifier) {
                 modifier = Modifier
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = { navController.navigate("map_screen") })
+                    .clickable(onClick = onClickLeft)
             ) {
                 Text(
-                    text = "Карта",
+                    text = textLeft,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -426,10 +423,10 @@ fun MainBottomBar(navController: NavController, modifier: Modifier) {
                 modifier = Modifier
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = { navController.navigate("impression_list") })
+                    .clickable(onClick = onClickRight)
             ) {
                 Text(
-                    text = "Список",
+                    text = textRight,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }

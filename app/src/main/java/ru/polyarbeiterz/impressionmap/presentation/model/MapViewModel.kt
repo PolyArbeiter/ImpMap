@@ -15,12 +15,15 @@ import com.yandex.runtime.image.ImageProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.logic.ImpressionSynchronizer
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.LocationService
@@ -45,6 +48,8 @@ class MapViewModel @Inject constructor(
     private val _isLoadingLocation = MutableStateFlow(false)
     val isLoadingLocation: StateFlow<Boolean> = _isLoadingLocation.asStateFlow()
 
+    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     fun setMapView(mapView: MapView?) {
         _uiState.update { it.copy(mapView = mapView) }
     }

@@ -125,7 +125,7 @@ fun AppNavigation(context: Context) {
                 lon.toFloat()
             )
         }
-        composable("impression_list") {
+        composable("impression_list_screen") {
             ImpressionListComposable(navController)
         }
     }
