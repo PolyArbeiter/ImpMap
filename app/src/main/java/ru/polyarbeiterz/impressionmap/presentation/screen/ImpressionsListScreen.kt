@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -20,6 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.ChoiceCard
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionsListModel
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
@@ -85,6 +90,35 @@ fun ImpressionsList(
 ) {
     val impressionsList = impressionsListModel.allImpressions.collectAsState().value
 
+    var impressionToDelete by remember { mutableStateOf<ImpressionLocal?>(null) }
+
+    if (impressionToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { impressionToDelete = null },
+            title = { Text("Удалить воспоминание?") },
+            text = { Text("Вы уверены, что хотите удалить \"${impressionToDelete?.title}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        impressionsListModel.deleteImp(impressionToDelete!!)
+                        impressionToDelete = null
+                    }
+                ) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        impressionToDelete = null
+                    }
+                ) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -103,6 +137,7 @@ fun ImpressionsList(
                     cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
                     cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
                     onClick = { navController.navigate("impression_addition/${el.id}") },
+                    onLongPress = { impressionToDelete = el },
                     chosen = false,
                     modifier = Modifier.fillMaxWidth()
                 )

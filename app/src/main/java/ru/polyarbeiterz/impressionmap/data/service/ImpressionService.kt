@@ -31,4 +31,8 @@ class ImpressionService @Inject constructor(
     suspend fun insertAll(vararg impressionLocals: ImpressionLocal) {
         impDao.insertAll(*impressionLocals)
     }
+
+    suspend fun delete(imp: ImpressionLocal) {
+        impDao.delete(imp)
+    }
 }

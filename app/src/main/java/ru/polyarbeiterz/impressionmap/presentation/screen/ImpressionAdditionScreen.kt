@@ -94,7 +94,7 @@ fun ImpressionAdditionScreen(
     val isNew = impressionId == -1
 
     val impression = if (!isNew) {
-        impAdditionModel.getImpressionById(impressionId).collectAsState(initial = null).value
+        impAdditionModel.getImpById(impressionId).collectAsState(initial = null).value
     } else {
         null
     }
@@ -104,8 +104,8 @@ fun ImpressionAdditionScreen(
         return
     }
 
-    var title by rememberSaveable { mutableStateOf(impression?.title ?: "") }
-    var description by rememberSaveable { mutableStateOf(impression?.description ?: "") }
+    var title by rememberSaveable { mutableStateOf(impression?.title) }
+    var description by rememberSaveable { mutableStateOf(impression?.description) }
     var selectedDateTime by rememberSaveable { mutableLongStateOf(impression?.date ?: System.currentTimeMillis()) }
 
     var checkedSaveLocally by remember { mutableStateOf(true) }
@@ -141,18 +141,18 @@ fun ImpressionAdditionScreen(
                                 latitude = lat,
                                 longitude = lon,
                                 date = selectedDateTime,
-                                title = title,
-                                description = description,
+                                title = title ?: "Без названия",
+                                description = description ?: "Без описания",
                                 onServer = checkedSendToServer,
                             )
                         )
                     } else {
-                        impAdditionModel.updateImpression(
+                        impAdditionModel.updateImp(
                             impression!!.copy(
                                 id = impressionId,
                                 date = selectedDateTime,
-                                title = title,
-                                description = description,
+                                title = title ?: "Без названия",
+                                description = description ?: "Без описания",
                                 onServer = checkedSendToServer,
                             )
                         )
@@ -169,7 +169,7 @@ fun ImpressionAdditionScreen(
 
             OutlinedTextField(
                 label = { Text(text = "Имя воспоминания") },
-                value = title,
+                value = title ?: "",
                 singleLine = true,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth()
@@ -177,7 +177,7 @@ fun ImpressionAdditionScreen(
 
             OutlinedTextField(
                 label = { Text(text = "Описание воспоминания") },
-                value = description,
+                value = description ?: "",
                 onValueChange = { description = it },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth()

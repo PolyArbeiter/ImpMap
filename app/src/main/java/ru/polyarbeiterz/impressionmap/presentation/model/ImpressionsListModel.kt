@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import javax.inject.Inject
@@ -24,7 +25,14 @@ class ImpressionsListModel @Inject constructor(
     val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    suspend fun insertImp(imp: ImpressionLocal) {
-        impressionService.insertAll(imp)
+    fun insertImp(imp: ImpressionLocal) {
+        viewModelScope.launch {
+            impressionService.insertAll(imp)
+        }
+    }
+    fun deleteImp(impression: ImpressionLocal) {
+        viewModelScope.launch {
+            impressionService.delete(impression)
+        }
     }
 }
