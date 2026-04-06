@@ -111,18 +111,21 @@ fun AppNavigation(context: Context) {
         }
 
         composable(
-            "impression_addition/{lat}/{lon}",
+            "impression_addition/{impressionId}?latitude={latitude}&longitude={longitude}",
             arguments = listOf(
-                navArgument("lat") { type = NavType.FloatType },
-                navArgument("lon") { type = NavType.FloatType }
+                navArgument("impressionId") { type = NavType.IntType },
+                navArgument("latitude") { type = NavType.FloatType; defaultValue = 0f },
+                navArgument("longitude") { type = NavType.FloatType; defaultValue = 0f }
             )
         ) { backStackEntry ->
-            val lat = backStackEntry.arguments?.getFloat("lat") ?: 0.0
-            val lon = backStackEntry.arguments?.getFloat("lon") ?: 0.0
+            val impressionId = backStackEntry.arguments?.getInt("impressionId") ?: -1
+            val defaultLat = backStackEntry.arguments?.getFloat("latitude") ?: 0f
+            val defaultLon = backStackEntry.arguments?.getFloat("longitude") ?: 0f
             ImpressionAdditionScreen(
-                navController,
-                lat.toFloat(),
-                lon.toFloat()
+                navController = navController,
+                impressionId = impressionId,
+                defaultLat,
+                defaultLon
             )
         }
         composable("impression_list_screen") {
@@ -202,7 +205,7 @@ fun ChoiceDialog(
     mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
     val serverList by mainActivityModel.allHosts.collectAsState()
-    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = null)
+    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = Host(name = "local_mode", ip = "127.0.0.1", port = -1))
     var showAdditionModal by remember { mutableStateOf(false) }
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
     var isCheckingConnection by remember { mutableStateOf(false) }
@@ -295,7 +298,6 @@ fun ChoiceDialog(
                             cardName = "Ваше устройство",
                             cardDescription = "Данные сохранены локально",
                             onClick = { mainActivityModel.selectLocalMode() },
-                            onLongPress = {},
                             chosen = selectedHost?.ip == "127.0.0.1" && selectedHost?.port == -1
                         )
                     }
@@ -350,12 +352,12 @@ fun ChoiceDialog(
                     enabled = selectedHost != null && !isCheckingConnection,
                     onClick = {
                         if (selectedHost?.ip != "127.0.0.1" && selectedHost?.port != -1)
-                        locationPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            locationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
                             )
-                        )
                         else
                             navController.navigate("map_screen")
                     }
@@ -372,7 +374,7 @@ fun ChoiceCard(
     modifier: Modifier = Modifier,
     cardName: String,
     cardDescription: String,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
     onLongPress: () -> Unit = {},
     chosen: Boolean
 ) {

@@ -111,13 +111,13 @@ fun ImpressionsList(
         items(
             impressionsList.size,
             key = { index ->
-                "${impressionsList[index].latitude}:${impressionsList[index].longitude}:${impressionsList[index].date}"
+                "${impressionsList[index].id}:${impressionsList[index].latitude}:${impressionsList[index].longitude}"
             }) { index ->
                 val el = impressionsList.elementAt(index)
                 ChoiceCard(
-                    cardName = el.title ?: "Без названия",
-                    cardDescription = el.description ?: "Без названия",
-                    onClick = { navController.navigate("impression_addition/${el.latitude}/${el.longitude}") },
+                    cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
+                    cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
+                    onClick = { navController.navigate("impression_addition/${el.id}") },
                     chosen = false,
                     modifier = Modifier.fillMaxWidth()
                 )

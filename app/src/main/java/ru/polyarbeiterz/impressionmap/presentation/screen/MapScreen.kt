@@ -202,7 +202,7 @@ fun MapInteractionScreen(
             },
             onStartImpCreation = { lat, lon ->
                 navController.navigate(
-                    "impression_addition/${lat}/${lon}"
+                    "impression_addition/-1?latitude=${lat}&longitude=${lon}"
                 )
             },
             onUpdateImpressions = {

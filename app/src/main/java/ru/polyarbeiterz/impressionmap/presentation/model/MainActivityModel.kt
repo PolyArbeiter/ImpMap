@@ -33,13 +33,17 @@ class MainActivityModel @Inject constructor(
     val allHosts: StateFlow<List<Host>> = hostService.getAll()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val selectedHost: Flow<Host> = context.dataStore.data
+    val selectedHost: Flow<Host?> = context.dataStore.data
         .map { preferences ->
-            Host(
-                name = preferences[PreferencesKeys.SELECTED_HOST_NAME],
-                ip = preferences[PreferencesKeys.SELECTED_HOST_IP],
-                port = preferences[PreferencesKeys.SELECTED_HOST_PORT]
-            )
+            val name = preferences[PreferencesKeys.SELECTED_HOST_NAME]
+            val ip = preferences[PreferencesKeys.SELECTED_HOST_IP]
+            val port = preferences[PreferencesKeys.SELECTED_HOST_PORT]
+
+            if (ip == null || port == null) {
+                null
+            } else {
+                Host(name = name, ip = ip, port = port)
+            }
         }
 
     fun selectHost(host: Host) {
@@ -91,7 +95,8 @@ class MainActivityModel @Inject constructor(
             hostService.deleteAll(host)
             if (host.name == selectedHost.firstOrNull()?.name &&
                 host.ip == selectedHost.firstOrNull()?.ip &&
-                host.port == selectedHost.firstOrNull()?.port)
+                host.port == selectedHost.firstOrNull()?.port
+            )
                 selectLocalMode()
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,9 +28,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,10 +50,15 @@ import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @Composable
-fun ImpressionAdditionScreen(navController: NavController, latitude: Float?, longituted: Float?) {
+fun ImpressionAdditionScreen(
+    navController: NavController,
+    impressionId: Int,
+    lat: Float = 0f,
+    lon: Float = 0f
+) {
     ImpressionMapTheme {
         Scaffold(
-            topBar = { TopBar() },
+            topBar = { AdditionTopBar() },
             modifier = Modifier.fillMaxSize()) { innerPadding ->
             Column(
                 modifier = Modifier.padding(innerPadding),
@@ -57,9 +66,10 @@ fun ImpressionAdditionScreen(navController: NavController, latitude: Float?, lon
             ) {
                 ImpressionAdditionMenu(
                     navController,
-                    latitude = latitude,
-                    longituted = longituted,
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(8.dp),
+                    impressionId = impressionId,
+                    lat = lat,
+                    lon = lon
                 )
             }
         }
@@ -99,29 +109,46 @@ fun DatePickerModal(
 fun ImpressionAdditionMenu(
     navController: NavController,
     modifier: Modifier = Modifier,
-    latitude: Float?,
-    longituted: Float?,
+    lat: Float = 0f,
+    lon: Float = 0f,
+    impressionId: Int,
     impAdditionModel: ImpressionAdditionModel = hiltViewModel()
 ) {
+
+    val isNew = impressionId == -1
+
+    val impression = if (!isNew) {
+        impAdditionModel.getImpressionById(impressionId).collectAsState(initial = null).value
+    } else {
+        null
+    }
+
+    if (impression == null && !isNew) {
+        CircularProgressIndicator()
+        return
+    }
+
+    var title by rememberSaveable { mutableStateOf(impression?.title ?: "") }
+    var description by rememberSaveable { mutableStateOf(impression?.description ?: "") }
+
     var checkedSaveLocally by remember { mutableStateOf(true) }
     var checkedSendToServer by remember { mutableStateOf(false) }
-    var textFieldName by remember { mutableStateOf("") }
-    var textFieldDescription by remember { mutableStateOf("") }
 
     Column(modifier) {
         Text(text = "Имя воспоминания")
         OutlinedTextField(
-            value = textFieldName,
+            value = title,
             singleLine = true,
-            onValueChange = { textFieldName = it },
+            onValueChange = { title = it },
             placeholder = { Text(text = "Имя") },
             modifier = Modifier.fillMaxWidth()
         )
         Text(text = "Описание воспоминания")
         OutlinedTextField(
-            value = textFieldDescription,
-            onValueChange = { textFieldDescription = it },
+            value = description,
+            onValueChange = { description = it },
             placeholder = { Text(text = "Описание") },
+            minLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -168,17 +195,26 @@ fun ImpressionAdditionMenu(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = {
-                impAdditionModel.viewModelScope.launch {
+            Button(onClick = { if (isNew) {
                     impAdditionModel.insertImp(
                         ImpressionLocal(
-                            latitude = latitude,
-                            longitude = longituted,
-                            description = textFieldDescription,
+                            latitude = lat,
+                            longitude = lon,
+                            title = title,
+                            description = description,
                             onServer = checkedSendToServer,
                         )
                     )
-                }
+            } else {
+                impAdditionModel.updateImpression(
+                    impression!!.copy(
+                        id = impressionId,
+                        title = title,
+                        description = description,
+                        onServer = checkedSendToServer,
+                    )
+                )
+            }
                 navController.navigate("map_screen")
             }) {
                 Text(text="Сохранить")
@@ -189,7 +225,7 @@ fun ImpressionAdditionMenu(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar() {
+fun AdditionTopBar() {
     TopAppBar(
         colors = topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -205,7 +241,7 @@ fun TopBar() {
 fun ImpressionAdditionMenuPreview() {
     ImpressionMapTheme {
         Scaffold(
-            topBar = { TopBar() },
+            topBar = { AdditionTopBar() },
             modifier = Modifier.fillMaxSize()) { innerPadding ->
                 Column(
                     modifier = Modifier.padding(innerPadding),
