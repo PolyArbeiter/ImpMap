@@ -12,15 +12,20 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
 import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.data.service.HostService
+import ru.polyarbeiterz.impressionmap.di.UrlManager
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
 class MainActivityModel @Inject constructor(
     val hostService: HostService,
+    val urlManager: UrlManager,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -88,6 +93,21 @@ class MainActivityModel @Inject constructor(
                 host.ip == selectedHost.firstOrNull()?.ip &&
                 host.port == selectedHost.firstOrNull()?.port)
                 selectLocalMode()
+        }
+    }
+
+    fun checkServerConnection(url: String): Boolean {
+        return try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(3, TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder()
+                .url(url)
+                .head()
+                .build()
+            client.newCall(request).execute().isSuccessful
+        } catch (e: Exception) {
+            false
         }
     }
 }

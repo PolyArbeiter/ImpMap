@@ -205,6 +205,8 @@ fun ChoiceDialog(
     val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = null)
     var showAdditionModal by remember { mutableStateOf(false) }
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
+    var isCheckingConnection by remember { mutableStateOf(false) }
+    var showConnectionError by remember { mutableStateOf(false) }
 
     var locationPermissionGranted by remember { mutableStateOf(false) }
 
@@ -248,11 +250,25 @@ fun ChoiceDialog(
         )
     }
 
+    if (showConnectionError) {
+        AlertDialog(
+            onDismissRequest = { showConnectionError = false },
+            title = { Text("Сервер недоступен") },
+            text = { Text("Не удалось подключиться к выбранному серверу. Проверьте адрес и порт.") },
+            confirmButton = {
+                Button(
+                    onClick = { showConnectionError = false }
+                ) {
+                    Text("ОК")
+                }
+            }
+        )
+    }
+
     ServerAdditionDialog(
         showModal = showAdditionModal,
         onDismissRequest = { showAdditionModal = false },
         onAddition = { server: Host ->
-            // add and update serverList
             mainActivityModel.viewModelScope.launch {
                 mainActivityModel.insertHost(server)
             }
@@ -293,19 +309,45 @@ fun ChoiceDialog(
                         ChoiceCard(
                             cardName = el.name ?: "Нет имени",
                             cardDescription = "IP: " + el.ip + ", порт: " + el.port,
-                            onClick = { mainActivityModel.selectHost(el) },
+                            onClick = {
+                                mainActivityModel.viewModelScope.launch {
+                                    isCheckingConnection = true
+                                    val url = "http://${el.ip}:${el.port}"
+                                    val isReachable = if (el.ip == "127.0.0.1") {
+                                        true
+                                    } else {
+                                        val url = "http://${el.ip}:${el.port}"
+                                        mainActivityModel.checkServerConnection(url)
+                                    }
+                                    isCheckingConnection = false
+
+                                    mainActivityModel.selectHost(el)
+                                    mainActivityModel.urlManager.updateUrl(url)
+                                    // make ping handler for healthcheck of server
+//                                    if (isReachable) {
+//                                        mainActivityModel.selectHost(el)
+//                                        mainActivityModel.urlManager.updateUrl(url)
+//                                    } else {
+//                                        showConnectionError = true
+//                                    }
+                                }
+                            },
                             onLongPress = { hostToDelete = el },
                             chosen = selectedHost?.ip == el.ip && selectedHost?.port == el.port
                         )
                     }
                 }
-                Button(
-                    modifier = Modifier.fillMaxWidth(), onClick = { showAdditionModal = true }) {
-                    Text(text = "Добавить сервер")
-                }
+
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = selectedHost != null,
+                    onClick = { showAdditionModal = true }
+                ) {
+                    Text(text = "Добавить сервер")
+                }
+
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedHost != null && !isCheckingConnection,
                     onClick = {
                         if (selectedHost?.ip != "127.0.0.1" && selectedHost?.port != -1)
                         locationPermissionLauncher.launch(
@@ -316,7 +358,10 @@ fun ChoiceDialog(
                         )
                         else
                             navController.navigate("map_screen")
-                    }) { Text(text = "Продолжить") }
+                    }
+                ) {
+                    Text(text = "Продолжить")
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
 import android.graphics.PointF
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -103,14 +104,18 @@ fun MapInteractionScreen(
                 .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
 
             // get remote impressions and sync with them
-            viewModel.retrofitService.getAllImpressions()
-                .takeIf { it.isSuccessful }
-                .apply {
-                    viewModel.synchronizerService.synchronize(
-                        savedImpressionLocals.map { it.toServerDto() },
-                        this?.body() ?: emptyList()
-                    )
-                }
+            try {
+                viewModel.retrofitService.getAllImpressions()
+                    .takeIf { it.isSuccessful }
+                    .apply {
+                        viewModel.synchronizerService.synchronize(
+                            savedImpressionLocals.map { it.toServerDto() },
+                            this?.body() ?: emptyList()
+                        )
+                    }
+            } catch(e: Exception) {
+                Log.e("NETWORK", "Could not sync with remote server")
+            }
         }
     }
 
@@ -212,14 +217,18 @@ fun MapInteractionScreen(
                         .filterAndSaveImpressionsWithCoords(savedImpressionLocals)
 
                     // get remote impressions and sync with them
-                    viewModel.retrofitService.getAllImpressions()
-                        .takeIf { it.isSuccessful }
-                        .apply {
-                            viewModel.synchronizerService.synchronize(
-                                savedImpressionLocals.map { it.toServerDto() },
-                                this?.body() ?: emptyList()
-                            )
-                        }
+                    try {
+                        viewModel.retrofitService.getAllImpressions()
+                            .takeIf { it.isSuccessful }
+                            .apply {
+                                viewModel.synchronizerService.synchronize(
+                                    savedImpressionLocals.map { it.toServerDto() },
+                                    this?.body() ?: emptyList()
+                                )
+                            }
+                    } catch(e: Exception) {
+                        Log.e("NETWORK", "Could not sync with remote server")
+                    }
                 }
             },
             modifier = modifier.fillMaxSize()
