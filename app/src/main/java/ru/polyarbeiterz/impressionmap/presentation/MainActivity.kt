@@ -164,7 +164,8 @@ fun ChoiceButtonScreen(
             .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp)
     ) {
-        ChoiceDialog(navController, showModal, context, onDismissRequest = { showModal = false })
+        if (showModal)
+            ChoiceDialog(navController, onDismissRequest = { showModal = false })
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -197,8 +198,6 @@ fun ChoiceButtonScreen(
 @Composable
 fun ChoiceDialog(
     navController: NavController,
-    showModal: Boolean,
-    context: Context,
     onDismissRequest: () -> Unit,
     mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
@@ -272,20 +271,20 @@ fun ChoiceDialog(
         )
     }
 
-    ServerAdditionDialog(
-        showModal = showAdditionModal,
-        onDismissRequest = { showAdditionModal = false },
-        onAddition = { server: Host ->
-            mainActivityModel.viewModelScope.launch {
-                mainActivityModel.insertHost(server)
-            }
-            showAdditionModal = false
-        },
-        isValidIp = mainActivityModel::isValidIp,
-        isValidPort = mainActivityModel::isValidPort
-    )
+    if (showAdditionModal)
+        ServerAdditionDialog(
+            onDismissRequest = { showAdditionModal = false },
+            onAddition = { server: Host ->
+                mainActivityModel.viewModelScope.launch {
+                    mainActivityModel.insertHost(server)
+                }
+                showAdditionModal = false
+            },
+            isValidIp = mainActivityModel::isValidIp,
+            isValidPort = mainActivityModel::isValidPort
+        )
 
-    if (showModal) Dialog({ onDismissRequest() }) {
+    Dialog({ onDismissRequest() }) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -296,7 +295,10 @@ fun ChoiceDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(16.dp)
             ) {
-                LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = Modifier.height(500.dp)) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(1),
+                    modifier = Modifier.height(500.dp)
+                ) {
                     item(key = "local_mode") {
                         EntityCard(
                             cardName = "Ваше устройство",
@@ -375,7 +377,6 @@ fun ChoiceDialog(
 
 @Composable
 fun ServerAdditionDialog(
-    showModal: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     onAddition: (server: Host) -> Unit,
@@ -385,87 +386,85 @@ fun ServerAdditionDialog(
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("") }
-
-    if (showModal) {
-        Dialog({ onDismissRequest() }) {
-            Card(
-                modifier = modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+    Dialog({ onDismissRequest() }) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
+                Text(
+                    text = "Добавить новый сервер",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                )
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                    horizontalAlignment = Alignment.Start, modifier = Modifier.padding(16.dp)
                 ) {
-                    Text(
-                        text = "Добавить новый сервер",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
-                    )
-                    Column(
-                        horizontalAlignment = Alignment.Start, modifier = Modifier.padding(16.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = name,
-                            label = { Text(text = "Имя сервера") },
-                            onValueChange = { name = it },
-                            supportingText = {
-                                if (name.isNotEmpty() && name.length in 10..20) {
-                                    Text("Хорошее название", color = Color.White)
-                                } else if (name.isNotEmpty() && name.length > 20) {
-                                    Text("Хватит", color = Color.White)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = address,
-                            label = { Text(text = "IP-адрес") },
-                            onValueChange = { address = it },
-                            isError = address.isNotEmpty() && !isValidIp(address),
-                            supportingText = {
-                                if (address.isNotEmpty() && !isValidIp(address)) {
-                                    Text("Неверный формат IP", color = Color.Red)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = port,
-                            label = { Text(text = "Порт") },
-                            onValueChange = { port = it },
-                            isError = port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0),
-                            supportingText = {
-                                if (port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0)) {
-                                    Text("Неверный номер порта", color = Color.Red)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            onAddition(
-                                Host(
-                                    name = name, ip = address, port = port.toInt()
-                                )
-                            )
-                            name = ""
-                            address = ""
-                            port = ""
+                    OutlinedTextField(
+                        value = name,
+                        label = { Text(text = "Имя сервера") },
+                        onValueChange = { name = it },
+                        supportingText = {
+                            if (name.isNotEmpty() && name.length in 10..20) {
+                                Text("Хорошее название", color = Color.White)
+                            } else if (name.isNotEmpty() && name.length > 20) {
+                                Text("Хватит", color = Color.White)
+                            }
                         },
-                        enabled = (address.isNotEmpty() && isValidIp(address)) && (port.isNotEmpty() && isValidPort(
-                            port.toIntOrNull() ?: 0
-                        )),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text(text = "Добавить") }
-                    Button(
-                        onClick = { onDismissRequest() }, modifier = Modifier.fillMaxWidth()
-                    ) { Text(text = "Отменить") }
+                    )
+                    OutlinedTextField(
+                        value = address,
+                        label = { Text(text = "IP-адрес") },
+                        onValueChange = { address = it },
+                        isError = address.isNotEmpty() && !isValidIp(address),
+                        supportingText = {
+                            if (address.isNotEmpty() && !isValidIp(address)) {
+                                Text("Неверный формат IP", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = port,
+                        label = { Text(text = "Порт") },
+                        onValueChange = { port = it },
+                        isError = port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0),
+                        supportingText = {
+                            if (port.isNotEmpty() && !isValidPort(port.toIntOrNull() ?: 0)) {
+                                Text("Неверный номер порта", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
+                Button(
+                    onClick = {
+                        onAddition(
+                            Host(
+                                name = name, ip = address, port = port.toInt()
+                            )
+                        )
+                        name = ""
+                        address = ""
+                        port = ""
+                    },
+                    enabled = (address.isNotEmpty() && isValidIp(address)) && (port.isNotEmpty() && isValidPort(
+                        port.toIntOrNull() ?: 0
+                    )),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(text = "Добавить") }
+                Button(
+                    onClick = { onDismissRequest() }, modifier = Modifier.fillMaxWidth()
+                ) { Text(text = "Отменить") }
             }
         }
+
     }
 }
 
