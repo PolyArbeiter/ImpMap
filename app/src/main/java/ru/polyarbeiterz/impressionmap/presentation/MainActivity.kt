@@ -305,7 +305,7 @@ fun ChoiceDialog(
             ) {
                 LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = Modifier.height(500.dp)) {
                     item(key = "local_mode") {
-                        ChoiceCard(
+                        EntityCard(
                             cardName = "Ваше устройство",
                             cardDescription = "Данные сохранены локально",
                             onClick = { mainActivityModel.selectLocalMode() },
@@ -319,7 +319,7 @@ fun ChoiceDialog(
                         }
                     ) { index ->
                         val el = serverList.elementAt(index)
-                        ChoiceCard(
+                        EntityCard(
                             cardName = el.name ?: "Нет имени",
                             cardDescription = "IP: " + el.ip + ", порт: " + el.port,
                             onClick = {
@@ -381,7 +381,7 @@ fun ChoiceDialog(
 }
 
 @Composable
-fun ChoiceCard(
+fun EntityCard(
     modifier: Modifier = Modifier,
     cardName: String,
     cardDescription: String,

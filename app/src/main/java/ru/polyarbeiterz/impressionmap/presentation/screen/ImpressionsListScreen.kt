@@ -35,7 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
-import ru.polyarbeiterz.impressionmap.presentation.ChoiceCard
+import ru.polyarbeiterz.impressionmap.presentation.EntityCard
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionsListModel
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -133,7 +133,7 @@ fun ImpressionsList(
                 "${impressionsList[index].id}:${impressionsList[index].latitude}:${impressionsList[index].longitude}"
             }) { index ->
                 val el = impressionsList.elementAt(index)
-                ChoiceCard(
+                EntityCard(
                     cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
                     cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
                     onClick = { navController.navigate("impression_addition/${el.id}") },
