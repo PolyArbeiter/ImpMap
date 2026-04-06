@@ -64,9 +64,10 @@ import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
-import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionAdditionScreen
+import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionAdditionComposable
 import ru.polyarbeiterz.impressionmap.presentation.screen.ImpressionListComposable
 import ru.polyarbeiterz.impressionmap.presentation.screen.MapComposable
+import ru.polyarbeiterz.impressionmap.presentation.screen.SettingsComposable
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @AndroidEntryPoint
@@ -103,7 +104,7 @@ fun AppNavigation(context: Context) {
         startDestination = "choice_screen"
     ) {
         composable("choice_screen") {
-            ChoiceScreen(navController = navController, context = context)
+            ChoiceScreenComposable(navController = navController, context = context)
         }
 
         composable("map_screen") {
@@ -121,7 +122,7 @@ fun AppNavigation(context: Context) {
             val impressionId = backStackEntry.arguments?.getInt("impressionId") ?: -1
             val defaultLat = backStackEntry.arguments?.getFloat("latitude") ?: 0f
             val defaultLon = backStackEntry.arguments?.getFloat("longitude") ?: 0f
-            ImpressionAdditionScreen(
+            ImpressionAdditionComposable(
                 navController = navController,
                 impressionId = impressionId,
                 defaultLat,
@@ -131,33 +132,37 @@ fun AppNavigation(context: Context) {
         composable("impression_list_screen") {
             ImpressionListComposable(navController)
         }
+        composable("settings_screen") {
+            SettingsComposable(navController)
+        }
     }
 }
 
 
 @Composable
-fun ChoiceScreen(
+fun ChoiceScreenComposable(
     navController: NavController,
     modifier: Modifier = Modifier,
     context: Context
 ) {
     ImpressionMapTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
-        ) {
-            Box(modifier = modifier.fillMaxSize()) {
-                ChoiceButton(
-                    navController,
-                    modifier = Modifier.align(Alignment.Center),
-                    context = context
-                )
-            }
+        Box(modifier = modifier.fillMaxSize()) {
+            ChoiceButtonScreen(
+                navController,
+                modifier = Modifier.align(Alignment.Center),
+                context = context
+            )
+
         }
     }
 }
 
 @Composable
-fun ChoiceButton(navController: NavController, modifier: Modifier = Modifier, context: Context) {
+fun ChoiceButtonScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    context: Context
+) {
     var showModal by remember { mutableStateOf(false) }
 
     OutlinedCard(
@@ -205,7 +210,13 @@ fun ChoiceDialog(
     mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
     val serverList by mainActivityModel.allHosts.collectAsState()
-    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = Host(name = "local_mode", ip = "127.0.0.1", port = -1))
+    val selectedHost by mainActivityModel.selectedHost.collectAsState(
+        initial = Host(
+            name = "local_mode",
+            ip = "127.0.0.1",
+            port = -1
+        )
+    )
     var showAdditionModal by remember { mutableStateOf(false) }
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
     var isCheckingConnection by remember { mutableStateOf(false) }

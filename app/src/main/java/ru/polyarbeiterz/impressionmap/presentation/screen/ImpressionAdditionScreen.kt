@@ -1,112 +1,88 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
-fun ImpressionAdditionScreen(
+fun ImpressionAdditionComposable(
     navController: NavController,
     impressionId: Int,
     lat: Float = 0f,
     lon: Float = 0f
 ) {
     ImpressionMapTheme {
-        Scaffold(
-            topBar = { AdditionTopBar() },
-            modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Column(
-                modifier = Modifier.padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                ImpressionAdditionMenu(
-                    navController,
-                    modifier = Modifier.padding(8.dp),
-                    impressionId = impressionId,
-                    lat = lat,
-                    lon = lon
-                )
-            }
-        }
+        ImpressionAdditionScreen(
+            navController,
+            impressionId = impressionId,
+            lat = lat,
+            lon = lon,
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatePickerModal(
-    onDateSelected: (Long?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val datePickerState = rememberDatePickerState()
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                onDateSelected(datePickerState.selectedDateMillis)
-                onDismiss()
-            }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    ) {
-        DatePicker(state = datePickerState)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ImpressionAdditionMenu(
+fun ImpressionAdditionScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
     lat: Float = 0f,
@@ -130,32 +106,114 @@ fun ImpressionAdditionMenu(
 
     var title by rememberSaveable { mutableStateOf(impression?.title ?: "") }
     var description by rememberSaveable { mutableStateOf(impression?.description ?: "") }
+    var selectedDateTime by rememberSaveable { mutableLongStateOf(impression?.date ?: System.currentTimeMillis()) }
 
     var checkedSaveLocally by remember { mutableStateOf(true) }
     var checkedSendToServer by remember { mutableStateOf(false) }
 
-    Column(modifier) {
-        Text(text = "Имя воспоминания")
-        OutlinedTextField(
-            value = title,
-            singleLine = true,
-            onValueChange = { title = it },
-            placeholder = { Text(text = "Имя") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(text = "Описание воспоминания")
-        OutlinedTextField(
-            value = description,
-            onValueChange = { description = it },
-            placeholder = { Text(text = "Описание") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Дата и время")
+    var showDatePicker by remember { mutableStateOf(false) }
 
+    val formattedDate = selectedDateTime?.let { millis ->
+        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.getDefault())
+        ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
+            .format(formatter)
+    } ?: "Выберите дату и время"
+
+    if (showDatePicker) {
+        DateTimePickerModal(
+            initialDateMillis = selectedDateTime,
+            onDateSelected = { millis ->
+                selectedDateTime = millis ?: System.currentTimeMillis()
+            },
+            onDismiss = { showDatePicker = false }
+        )
+    }
+
+    Column() {
+        Box() {
+            ImpressionAdditionTopBar(
+                navController = navController,
+                isNew = isNew,
+                onSaveClick = {
+                    if (isNew) {
+                        impAdditionModel.insertImp(
+                            ImpressionLocal(
+                                latitude = lat,
+                                longitude = lon,
+                                date = selectedDateTime,
+                                title = title,
+                                description = description,
+                                onServer = checkedSendToServer,
+                            )
+                        )
+                    } else {
+                        impAdditionModel.updateImpression(
+                            impression!!.copy(
+                                id = impressionId,
+                                date = selectedDateTime,
+                                title = title,
+                                description = description,
+                                onServer = checkedSendToServer,
+                            )
+                        )
+                    }
+                },
+                modifier = modifier
+                    .align(Alignment.TopCenter)
+            )
         }
-        //TODO() Добавить DatePicker
+
+        Column(
+            modifier
+        ) {
+
+            OutlinedTextField(
+                label = { Text(text = "Имя воспоминания") },
+                value = title,
+                singleLine = true,
+                onValueChange = { title = it },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                label = { Text(text = "Описание воспоминания") },
+                value = description,
+                onValueChange = { description = it },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClick = { showDatePicker = true },
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    )
+            ) {
+                OutlinedTextField(
+                    label = { Text(text = "Дата и время") },
+                    value = formattedDate,
+                    singleLine = true,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Выбрать дату",
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledContainerColor = Color.Transparent,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Поделиться на сервере")
             Spacer(modifier = Modifier.weight(1f))
@@ -183,7 +241,7 @@ fun ImpressionAdditionMenu(
                         .clickable(
                             enabled = true,
                             onClick = {
-                                TODO("Кнопка должна вызывать функцию добавления файлов")
+//                                TODO("Кнопка должна вызывать функцию добавления файлов")
                             })
                 ) {
                     Icon(
@@ -194,63 +252,170 @@ fun ImpressionAdditionMenu(
                 }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = { if (isNew) {
-                    impAdditionModel.insertImp(
-                        ImpressionLocal(
-                            latitude = lat,
-                            longitude = lon,
-                            title = title,
-                            description = description,
-                            onServer = checkedSendToServer,
-                        )
-                    )
-            } else {
-                impAdditionModel.updateImpression(
-                    impression!!.copy(
-                        id = impressionId,
-                        title = title,
-                        description = description,
-                        onServer = checkedSendToServer,
-                    )
-                )
-            }
-                navController.navigate("map_screen")
-            }) {
-                Text(text="Сохранить")
-            }
+    }
+}
+
+
+@Composable
+fun ImpressionAdditionTopBar(
+    navController: NavController,
+    isNew: Boolean,
+    onSaveClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+    ) {
+        TextButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            Text("Назад")
+        }
+        Text(
+            text = "Добавление".takeIf { isNew } ?: "Редактирование",
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp),
+        )
+        TextButton(
+            onClick = {
+                onSaveClick()
+                navController.popBackStack()
+            },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Text("Сохранить")
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdditionTopBar() {
-    TopAppBar(
-        colors = topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.primary,
-        ),
-        title = {Text(text = "Редактирование воспоминания")}
-    )
-}
+fun DateTimePickerModal(
+    initialDateMillis: Long? = null,
+    onDateSelected: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
-@Composable
-fun ImpressionAdditionMenuPreview() {
-    ImpressionMapTheme {
-        Scaffold(
-            topBar = { AdditionTopBar() },
-            modifier = Modifier.fillMaxSize()) { innerPadding ->
-                Column(
-                    modifier = Modifier.padding(innerPadding),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-//                    ImpressionAdditionMenu(
-//                        modifier = Modifier.padding(8.dp)
-//                    )
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDateMillis
+    )
+
+    val initialHour = initialDateMillis?.let { millis ->
+        ZonedDateTime.ofInstant(
+            Instant.ofEpochMilli(millis),
+            ZoneId.systemDefault()
+        ).hour
+    } ?: 12
+
+    val initialMinute = initialDateMillis?.let { millis ->
+        ZonedDateTime.ofInstant(
+            Instant.ofEpochMilli(millis),
+            ZoneId.systemDefault()
+        ).minute
+    } ?: 0
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true
+    )
+
+    val selectedDateTime =
+        remember(datePickerState.selectedDateMillis, timePickerState.hour, timePickerState.minute) {
+            datePickerState.selectedDateMillis?.let { date ->
+                val zdt = ZonedDateTime.ofInstant(
+                    Instant.ofEpochMilli(date),
+                    ZoneId.systemDefault()
+                ).withHour(timePickerState.hour)
+                    .withMinute(timePickerState.minute)
+                    .withSecond(0)
+                    .withNano(0)
+                zdt.toInstant().toEpochMilli()
+            }
+        }
+
+    val formattedDate = selectedDateTime?.let { millis ->
+        val formatter =
+            DateTimeFormatter.ofPattern("dd MMMM yyyy, HH:mm", Locale.getDefault())
+        ZonedDateTime.ofInstant(
+            Instant.ofEpochMilli(millis),
+            ZoneId.systemDefault()
+        ).format(formatter)
+    } ?: "Выберите дату и время"
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            FilledTonalButton(onClick = {
+                onDateSelected(selectedDateTime)
+                onDismiss()
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(600.dp)
+        ) {
+//            Text(
+//                text = formattedDate,
+//                style = MaterialTheme.typography.titleMedium,
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 16.dp, vertical = 8.dp),
+//                textAlign = TextAlign.Center
+//            )
+
+            // Табы для переключения
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Дата") }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Время") }
+                )
+            }
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                // Контент табов
+                when (selectedTab) {
+                    0 -> DatePicker(
+                        state = datePickerState,
+                        title = { Text("Выберите дату", modifier = Modifier.padding(16.dp)) },
+                        headline = { Text("Выбранная дата", modifier = Modifier.padding(16.dp)) },
+                        modifier = Modifier.fillMaxHeight()
+                    )
+
+                    1 -> TimePicker(state = timePickerState)
                 }
             }
+        }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun TestPreview() {
+//    ImpressionAdditionTopBar(navController = rememberNavController(), isNew = false, {})
+    DateTimePickerModal(null, {}, {})
 }

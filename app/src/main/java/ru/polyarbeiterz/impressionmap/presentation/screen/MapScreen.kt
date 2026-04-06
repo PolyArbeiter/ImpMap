@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,9 +54,7 @@ import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
-import ru.polyarbeiterz.impressionmap.core.logic.filterAndSaveImpressionsWithCoords
 import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
-import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
@@ -229,7 +226,6 @@ fun MapInteractionScreen(
                 .align(Alignment.TopCenter)
                 .padding(top = 12.dp)
                 .padding(horizontal = 8.dp)
-                .statusBarsPadding()
         )
         BottomNavBar(
             textLeft = "Карта",
@@ -238,7 +234,6 @@ fun MapInteractionScreen(
             onClickRight = { navController.navigate("impression_list_screen") },
             modifier = modifier
                 .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
         )
     }
 }
@@ -349,8 +344,9 @@ fun MainTopBar(
         verticalAlignment = Alignment.Top,
         modifier = modifier
             .fillMaxWidth()
+            .statusBarsPadding()
     ) {
-        Button(onClick = {}) {
+        Button(onClick = {navController.navigate("settings_screen")}) {
             Icon(
                 painter = painterResource(R.drawable.baseline_settings_24),
                 contentDescription = null
@@ -404,6 +400,7 @@ fun BottomNavBar(
 ) {
     Surface(
         modifier = modifier
+            .navigationBarsPadding()
             .clip(RoundedCornerShape(12.dp))
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -412,6 +409,7 @@ fun BottomNavBar(
                     .width(96.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onClickLeft)
+                    .navigationBarsPadding()
             ) {
                 Text(
                     text = textLeft,
