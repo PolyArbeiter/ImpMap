@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
@@ -54,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
+import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 import java.time.Instant
@@ -131,10 +131,11 @@ fun ImpressionAdditionScreen(
 
     Column() {
         Box() {
-            ImpressionAdditionTopBar(
+            SimpleTopBar(
                 navController = navController,
-                isNew = isNew,
-                onSaveClick = {
+                headerText = "Добавление".takeIf { isNew } ?: "Редактирование",
+                actionButtonText = "Сохранить",
+                actionButtonOnClick = {
                     if (isNew) {
                         impAdditionModel.insertImp(
                             ImpressionLocal(
@@ -157,6 +158,7 @@ fun ImpressionAdditionScreen(
                             )
                         )
                     }
+                    navController.popBackStack()
                 },
                 modifier = modifier
                     .align(Alignment.TopCenter)
@@ -251,43 +253,6 @@ fun ImpressionAdditionScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-
-@Composable
-fun ImpressionAdditionTopBar(
-    navController: NavController,
-    isNew: Boolean,
-    onSaveClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-    ) {
-        TextButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Text("Назад")
-        }
-        Text(
-            text = "Добавление".takeIf { isNew } ?: "Редактирование",
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 8.dp),
-        )
-        TextButton(
-            onClick = {
-                onSaveClick()
-                navController.popBackStack()
-            },
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Text("Сохранить")
         }
     }
 }

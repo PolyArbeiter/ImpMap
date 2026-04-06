@@ -4,28 +4,22 @@ import android.content.Context
 import android.graphics.PointF
 import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +49,7 @@ import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
+import ru.polyarbeiterz.impressionmap.presentation.components.BottomNavBar
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
@@ -388,48 +383,6 @@ fun MainTopBar(
         }
     }
 
-}
-
-@Composable
-fun BottomNavBar(
-    textLeft: String,
-    textRight: String,
-    onClickLeft: () -> Unit,
-    onClickRight: () -> Unit,
-    modifier: Modifier
-) {
-    Surface(
-        modifier = modifier
-            .navigationBarsPadding()
-            .clip(RoundedCornerShape(12.dp))
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .width(96.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onClickLeft)
-                    .navigationBarsPadding()
-            ) {
-                Text(
-                    text = textLeft,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            VerticalDivider(thickness = 1.dp, modifier = Modifier.height(24.dp))
-            Box(
-                modifier = Modifier
-                    .width(96.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onClickRight)
-            ) {
-                Text(
-                    text = textRight,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
-    }
 }
 
 private val START_ANIMATION = Animation(Animation.Type.LINEAR, 1f)

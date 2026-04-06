@@ -35,7 +35,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
-import ru.polyarbeiterz.impressionmap.presentation.EntityCard
+import ru.polyarbeiterz.impressionmap.presentation.components.BottomNavBar
+import ru.polyarbeiterz.impressionmap.presentation.components.EntityCard
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionsListModel
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme

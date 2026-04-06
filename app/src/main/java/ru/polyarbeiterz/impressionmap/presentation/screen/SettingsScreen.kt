@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,9 +19,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.presentation.components.NonEntityCard
+import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
+import ru.polyarbeiterz.impressionmap.presentation.model.SettingsModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @Composable
@@ -40,13 +42,16 @@ fun SettingsInteractionScreen(
     navController: NavController,
     context: Context,
     modifier: Modifier = Modifier,
-//    viewModel: SettingsModel = hiltViewModel()
+    viewModel: SettingsModel = hiltViewModel()
 ) {
     Column() {
         Box(modifier = modifier
             .fillMaxWidth()) {
-            SettingsTopBar(
+            SimpleTopBar(
                 navController = navController,
+                headerText = "Настройки",
+                actionButtonText = "",
+                actionButtonOnClick = {},
                 modifier = modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 12.dp)
@@ -73,41 +78,19 @@ fun SettingsInteractionScreen(
                 modifier = Modifier
                     .fillMaxSize()
             ){
-                Text("Одна настройка")
-                Text("Одна настройка")
-                Text("Одна настройка")
-                Text("Одна настройка")
-                Text("Одна настройка")
-                Text("Одна настройка")
+                NonEntityCard(
+                    cardName = "Настройки подключения",
+                    cardDescription = "Выбрать настройки подключения",
+                    onClick = {}
+                )
+                NonEntityCard(
+                    cardName = "О приложении",
+                    cardDescription = "",
+                    onClick = {}
+                )
+
             }
         }
-    }
-}
-
-
-@Composable
-fun SettingsTopBar(
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-    ) {
-        TextButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Text("Назад")
-        }
-
-        Text(
-            text = "Настройки",
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 8.dp),
-        )
     }
 }
 
