@@ -352,20 +352,16 @@ fun ChoiceDialog(
                 ) {
                     Text(text = "Добавить сервер")
                 }
-
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = selectedHost != null && !isCheckingConnection,
                     onClick = {
-                        if (selectedHost?.ip != "127.0.0.1" && selectedHost?.port != -1)
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
                             )
-                        else
-                            navController.navigate("map_screen")
+                        )
                     }
                 ) {
                     Text(text = "Продолжить")

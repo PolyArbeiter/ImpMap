@@ -17,8 +17,15 @@ class ImpressionService @Inject constructor(
         return impDao.getAll()
     }
 
-    fun getById(impressionId: Int): Flow<ImpressionLocal> {
-        return impDao.getById(impressionId)
+    fun getByImpId(impressionId: Int): Flow<ImpressionLocal> {
+        return impDao.getByImpId(impressionId)
+            .catch { e ->
+                Log.e("DATABASE", "Ошибка при чтении записи ID=$id", e)
+            }
+    }
+
+    fun getByUserId(userId: Int): Flow<List<ImpressionLocal>> {
+        return impDao.getAllByUserId(userId)
             .catch { e ->
                 Log.e("DATABASE", "Ошибка при чтении записи ID=$id", e)
             }

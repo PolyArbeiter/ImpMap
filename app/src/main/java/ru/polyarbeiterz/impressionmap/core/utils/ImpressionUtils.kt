@@ -7,6 +7,7 @@ fun ImpressionDto.toLocal(): ImpressionLocal =
     ImpressionLocal(
         latitude = this.latitude,
         longitude = this.longitude,
+//        date = this.date,
         title = this.title,
         description = this.description,
         onServer = true,
@@ -16,7 +17,9 @@ fun ImpressionLocal.toServerDto(): ImpressionDto =
     ImpressionDto(
         latitude = this.latitude,
         longitude = this.longitude,
+//        date = this.date,
         title = this.title,
         description = this.description,
-        onServer = this.onServer
+        onServer = this.onServer,
+//        media = this.media,
     )

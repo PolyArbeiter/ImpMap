@@ -23,7 +23,7 @@ class ImpressionAdditionModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun getImpById(id: Int): Flow<ImpressionLocal> {
-        return impressionService.getById(id)
+        return impressionService.getByImpId(id)
     }
 
     fun insertImp(imp: ImpressionLocal) {

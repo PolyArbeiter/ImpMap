@@ -15,10 +15,11 @@ import androidx.navigation.NavController
 @Composable
 fun SimpleTopBar(
     navController: NavController,
-    actionButtonText: String,
-    actionButtonOnClick: () -> Unit,
     headerText: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actionButtonText: String = "",
+    actionButtonOnClick: () -> Unit = {},
+    actionButtonEnabled: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -38,9 +39,8 @@ fun SimpleTopBar(
                 .padding(top = 8.dp),
         )
         TextButton(
-            onClick = {
-                actionButtonOnClick()
-            },
+            onClick = { actionButtonOnClick() },
+            enabled = actionButtonEnabled,
             modifier = Modifier.align(Alignment.TopEnd)
         ) {
             Text(actionButtonText)

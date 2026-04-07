@@ -72,8 +72,6 @@ fun SettingsInteractionScreen(
             SimpleTopBar(
                 navController = navController,
                 headerText = "Настройки",
-                actionButtonText = "",
-                actionButtonOnClick = {},
                 modifier = modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 12.dp)
@@ -103,7 +101,7 @@ fun SettingsInteractionScreen(
                 NonEntityCard(
                     cardName = "Настройки подключения",
                     cardDescription = "Выбрать настройки подключения",
-                    onClick = {  modalToShow = 1 }
+                    onClick = { modalToShow = 1 }
                 )
                 NonEntityCard(
                     cardName = "О приложении",

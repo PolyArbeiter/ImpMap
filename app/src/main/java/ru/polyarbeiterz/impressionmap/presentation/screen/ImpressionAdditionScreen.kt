@@ -106,14 +106,16 @@ fun ImpressionAdditionScreen(
 
     var title by rememberSaveable { mutableStateOf(impression?.title) }
     var description by rememberSaveable { mutableStateOf(impression?.description) }
-    var selectedDateTime by rememberSaveable { mutableLongStateOf(impression?.date ?: System.currentTimeMillis()) }
-
-    var checkedSaveLocally by remember { mutableStateOf(true) }
-    var checkedSendToServer by remember { mutableStateOf(false) }
+    var selectedDateTime by rememberSaveable {
+        mutableLongStateOf(
+            impression?.date ?: System.currentTimeMillis()
+        )
+    }
+    var checkedSendToServer by remember { mutableStateOf(impression?.onServer ?: false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val formattedDate = selectedDateTime?.let { millis ->
+    val formattedDate = selectedDateTime.let { millis ->
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.getDefault())
         ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
             .format(formatter)
@@ -160,6 +162,7 @@ fun ImpressionAdditionScreen(
                     }
                     navController.popBackStack()
                 },
+                actionButtonEnabled = !(title.isNullOrBlank() || description.isNullOrBlank()),
                 modifier = modifier
                     .align(Alignment.TopCenter)
             )
@@ -173,16 +176,28 @@ fun ImpressionAdditionScreen(
                 label = { Text(text = "Имя воспоминания") },
                 value = title ?: "",
                 singleLine = true,
+                isError = title.isNullOrBlank(),
                 onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = {
+                    if (title.isNullOrBlank()) {
+                        Text("Название должно быть заполнено", color = Color.Red)
+                    }
+                },
             )
 
             OutlinedTextField(
                 label = { Text(text = "Описание воспоминания") },
                 value = description ?: "",
+                isError = description.isNullOrBlank(),
                 onValueChange = { description = it },
                 minLines = 3,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = {
+                    if (description.isNullOrBlank()) {
+                        Text("Описание должно быть заполнено", color = Color.Red)
+                    }
+                },
             )
             Box(
                 modifier = Modifier
