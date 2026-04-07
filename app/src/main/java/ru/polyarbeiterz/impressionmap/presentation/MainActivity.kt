@@ -220,12 +220,16 @@ fun ChoiceDialog(
         onPermissionGranted = {
             locationPermissionGranted = true
             Log.d("Permission", "Геолокация разрешена")
-            navController.navigate("map_screen")
+            navController.navigate("map_screen") {
+                popUpTo("choice_screen") { inclusive = true }
+            }
         },
         onPermissionDenied = {
             locationPermissionGranted = false
             Log.d("Permission", "Геолокация запрещена")
-            navController.navigate("map_screen")
+            navController.navigate("map_screen") {
+                popUpTo("choice_screen") { inclusive = true }
+            }
         }
     )
 

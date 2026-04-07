@@ -1,5 +1,6 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.PointF
 import android.util.Log
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -72,9 +74,7 @@ fun MapInteractionScreen(
     viewModel: MapViewModel = hiltViewModel()
 ) {
 
-    BackHandler(enabled = true) {
-        // Кнопка "назад" пока просто игнорируется, чтобы нельзя было перейти обратно на меню выбора
-    }
+    var showExitConfirmation by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -100,7 +100,7 @@ fun MapInteractionScreen(
                             this?.body() ?: emptyList()
                         )
                     }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 Log.e("NETWORK", "Could not sync with remote server")
             }
         }
@@ -114,6 +114,29 @@ fun MapInteractionScreen(
             )
         }
     }
+
+    BackHandler(enabled = true) {
+        showExitConfirmation = true
+    }
+
+    if (showExitConfirmation)
+        AlertDialog(
+            onDismissRequest = { showExitConfirmation = false },
+            title = { Text("Exit App?") },
+            text = { Text("Are you sure you want to leave?") },
+            confirmButton = {
+                Button(onClick = {
+                    (context as? Activity)?.finish()
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showExitConfirmation = false }) {
+                    Text("No")
+                }
+            }
+        )
 
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
@@ -209,14 +232,15 @@ fun MapInteractionScreen(
                                     this?.body() ?: emptyList()
                                 )
                             }
-                    } catch(e: Exception) {
+                    } catch (e: Exception) {
                         Log.e("NETWORK", "Could not sync with remote server")
                     }
                 }
             },
             modifier = modifier.fillMaxSize()
         )
-        MainTopBar(navController,
+        MainTopBar(
+            navController,
             modifier = modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 12.dp)
@@ -341,7 +365,7 @@ fun MainTopBar(
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
-        Button(onClick = {navController.navigate("settings_screen")}) {
+        Button(onClick = { navController.navigate("settings_screen") }) {
             Icon(
                 painter = painterResource(R.drawable.baseline_settings_24),
                 contentDescription = null

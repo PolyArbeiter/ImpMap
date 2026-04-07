@@ -1,5 +1,6 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -111,6 +114,9 @@ fun ImpressionAdditionScreen(
             impression?.date ?: System.currentTimeMillis()
         )
     }
+
+//    val mediaList = impAdditionModel.getMediaByImpId(impressionId).collectAsState(initial = null).value
+
     var checkedSendToServer by remember { mutableStateOf(impression?.onServer ?: false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -178,10 +184,11 @@ fun ImpressionAdditionScreen(
                 singleLine = true,
                 isError = title.isNullOrBlank(),
                 onValueChange = { title = it },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = {
                     if (title.isNullOrBlank()) {
-                        Text("Название должно быть заполнено", color = Color.Red)
+                        Text("Название должно быть заполнено", color = Color.Black)
                     }
                 },
             )
@@ -191,11 +198,12 @@ fun ImpressionAdditionScreen(
                 value = description ?: "",
                 isError = description.isNullOrBlank(),
                 onValueChange = { description = it },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = {
                     if (description.isNullOrBlank()) {
-                        Text("Описание должно быть заполнено", color = Color.Red)
+                        Text("Описание должно быть заполнено", color = Color.Black)
                     }
                 },
             )
@@ -241,16 +249,16 @@ fun ImpressionAdditionScreen(
         LazyVerticalGrid(
             GridCells.Adaptive(64.dp), horizontalArrangement = Arrangement.Absolute.Center
         ) {
-            items(3) { i ->
-                Box(
-                    modifier = Modifier.padding(8.dp)
-                )
-                Icon(
-                    painter = painterResource(R.drawable.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp)
-                )
-            }
+//            items(mediaList) { index ->
+//                Box(
+//                    modifier = Modifier.padding(8.dp)
+//                )
+//                Image(
+//                    painter = painterResource(mediaList[index]),
+//                    contentDescription = null,
+//                    modifier = Modifier.size(64.dp)
+//                )
+//            }
             item {
                 Box(
                     modifier = Modifier
