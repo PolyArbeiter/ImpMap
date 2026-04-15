@@ -1,5 +1,7 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
+import android.Manifest
+import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -7,7 +9,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -58,10 +61,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
@@ -70,6 +75,7 @@ import ru.polyarbeiterz.impressionmap.data.entity.MediaType
 import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -85,12 +91,13 @@ fun ImpressionAdditionComposable(
 ) {
     ImpressionMapTheme {
         ImpressionAdditionScreen(
-            navController,
-            impressionId = impressionId,
+            navController = navController,
+            modifier = Modifier
+                .padding(horizontal = 8.dp),
+            context = LocalContext.current,
             lat = lat,
             lon = lon,
-            modifier = Modifier
-                .padding(horizontal = 8.dp)
+            impressionId = impressionId
         )
     }
 }
@@ -99,6 +106,7 @@ fun ImpressionAdditionComposable(
 fun ImpressionAdditionScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
+    context: Context,
     lat: Float = 0f,
     lon: Float = 0f,
     impressionId: Int,
@@ -128,36 +136,16 @@ fun ImpressionAdditionScreen(
         )
     }
 
-    val mediaList = impAdditionModel.getMediaByImpId(currentImpressionId)
-        .collectAsState(initial = emptyList()).value
-
     var checkedSendToServer by remember { mutableStateOf(impression?.onServer ?: false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var selectedImage by remember { mutableStateOf<ByteArray?>(null) }
 
     val formattedDate = selectedDateTime.let { millis ->
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.getDefault())
         ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
             .format(formatter)
     } ?: "Выберите дату и время"
-
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents(),
-        onResult = { uris ->
-            uris.forEach { uri ->
-                impAdditionModel.addMediaToImpression(
-                    uri,
-                    MediaType.IMAGE,
-                    impressionId = currentImpressionId
-                )
-            }
-        }
-    )
-
-    fun showMediaPicker() {
-        galleryLauncher.launch("image/*")
-    }
-
 
     if (showDatePicker) {
         DateTimePickerModal(
@@ -168,7 +156,6 @@ fun ImpressionAdditionScreen(
             onDismiss = { showDatePicker = false }
         )
     }
-
 
     LaunchedEffect(Unit) {
         if (isNew) {
@@ -293,48 +280,16 @@ fun ImpressionAdditionScreen(
                 checkedSendToServer = it
             })
         }
-        LazyVerticalGrid(
-            GridCells.Adaptive(64.dp), horizontalArrangement = Arrangement.Absolute.Center
-        ) {
-            items(mediaList.size) { index ->
-                val mediaItem = mediaList[index]
-                Box(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Gray)
-                )
-                if (mediaItem.mediaType == MediaType.IMAGE) {
-                    Image(
-                        bitmap = BitmapFactory.decodeByteArray(
-                            mediaItem.fileData,
-                            0,
-                            mediaItem.fileData.size
-                        ).asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-            item {
-                Box(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clickable(
-                            enabled = true,
-                            onClick = {
-                                showMediaPicker()
-                            })
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_add_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp)
-                    )
-                }
-            }
-        }
+        MediaGrid(
+            context = context,
+            impressionId = currentImpressionId,
+            onImageTap = { selectedImage = it })
+    }
+    if (selectedImage != null) {
+        FullScreenImageOverlay(
+            imageData = selectedImage!!,
+            onDismiss = { selectedImage = null }
+        )
     }
 }
 
@@ -458,6 +413,151 @@ fun DateTimePickerModal(
         }
     }
 }
+
+@Composable
+fun MediaGrid(
+    modifier: Modifier = Modifier,
+    onImageTap: (ByteArray) -> Unit,
+    context: Context,
+    impressionId: Int,
+    impAdditionModel: ImpressionAdditionModel = hiltViewModel()
+) {
+
+    var showMediaDialog by remember { mutableStateOf(false) }
+    val mediaList = impAdditionModel.getMediaByImpId(impressionId)
+        .collectAsState(initial = emptyList()).value
+
+    val cameraUri = remember {
+        val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = { uris ->
+            uris.forEach { uri ->
+                impAdditionModel.addMediaToImpression(
+                    uri,
+                    MediaType.IMAGE,
+                    impressionId = impressionId
+                )
+            }
+            showMediaDialog = false
+        }
+    )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) {
+                impAdditionModel.addMediaToImpression(
+                    cameraUri,
+                    MediaType.IMAGE,
+                    impressionId
+                )
+            }
+            showMediaDialog = false
+        }
+    )
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            if (granted) {
+                cameraLauncher.launch(cameraUri)
+            }
+        }
+    )
+
+    if (showMediaDialog) {
+        AlertDialog(
+            onDismissRequest = { showMediaDialog = false },
+            title = { Text("Выберите изображение") },
+            confirmButton = {
+                Button(onClick = { galleryLauncher.launch("image/*") }) {
+                    Text("Галерея")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                    Text("Камера")
+                }
+            }
+        )
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(mediaList.size) { index ->
+            val mediaItem = mediaList[index]
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Gray)
+                    .clickable { onImageTap(mediaItem.fileData) }
+            ) {
+                if (mediaItem.mediaType == MediaType.IMAGE) {
+                    Image(
+                        bitmap = BitmapFactory.decodeByteArray(
+                            mediaItem.fileData,
+                            0,
+                            mediaItem.fileData.size
+                        ).asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+        item {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Gray)
+                    .clickable { showMediaDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.outline_add_24),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FullScreenImageOverlay(imageData: ByteArray, onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.9f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            bitmap = BitmapFactory.decodeByteArray(
+                imageData,
+                0,
+                imageData.size
+            ).asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
