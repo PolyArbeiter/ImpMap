@@ -13,6 +13,5 @@ data class ImpressionLocal(
     @ColumnInfo(name = "title") val title: String? = "",
     @ColumnInfo(name = "description") val description: String? = "",
     @ColumnInfo(name = "date") val date: Long? = null,
-    @ColumnInfo(name = "on_server") val onServer: Boolean = false,
-    @ColumnInfo(name = "image_path") val imagePath: String? = null
+    @ColumnInfo(name = "on_server") val onServer: Boolean = false
 )

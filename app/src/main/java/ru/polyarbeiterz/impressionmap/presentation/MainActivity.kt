@@ -1,14 +1,10 @@
 package ru.polyarbeiterz.impressionmap.presentation
 
-import android.Manifest
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -136,16 +134,31 @@ fun AppNavigation(context: Context) {
 fun ChoiceScreenComposable(
     navController: NavController,
     modifier: Modifier = Modifier,
-    context: Context
+    context: Context,
+    mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
+
+    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = Host(name = "loading", ip = "", port = -2))
+
+    LaunchedEffect(selectedHost) {
+        if (selectedHost?.name != "loading" && selectedHost?.port != -2 && selectedHost != null) {
+            navController.navigate("map_screen") {
+                popUpTo("choice_screen") { inclusive = true }
+            }
+        }
+    }
+
     ImpressionMapTheme {
         Box(modifier = modifier.fillMaxSize()) {
-            ChoiceButtonScreen(
-                navController,
-                modifier = Modifier.align(Alignment.Center),
-                context = context
-            )
-
+            if (selectedHost?.name == "loading") {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (selectedHost?.port == -2 || selectedHost == null) {
+                ChoiceButtonScreen(
+                    navController,
+                    modifier = Modifier.align(Alignment.Center),
+                    context = context
+                )
+            }
         }
     }
 }
@@ -213,25 +226,6 @@ fun ChoiceDialog(
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
     var isCheckingConnection by remember { mutableStateOf(false) }
     var showConnectionError by remember { mutableStateOf(false) }
-
-    var locationPermissionGranted by remember { mutableStateOf(false) }
-
-    val locationPermissionLauncher = rememberLocationPermissionLauncher(
-        onPermissionGranted = {
-            locationPermissionGranted = true
-            Log.d("Permission", "Геолокация разрешена")
-            navController.navigate("map_screen") {
-                popUpTo("choice_screen") { inclusive = true }
-            }
-        },
-        onPermissionDenied = {
-            locationPermissionGranted = false
-            Log.d("Permission", "Геолокация запрещена")
-            navController.navigate("map_screen") {
-                popUpTo("choice_screen") { inclusive = true }
-            }
-        }
-    )
 
     if (hostToDelete != null) {
         AlertDialog(
@@ -356,20 +350,6 @@ fun ChoiceDialog(
                 ) {
                     Text(text = "Добавить сервер")
                 }
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = selectedHost != null && !isCheckingConnection,
-                    onClick = {
-                        locationPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    }
-                ) {
-                    Text(text = "Продолжить")
-                }
             }
         }
     }
@@ -467,23 +447,6 @@ fun ServerAdditionDialog(
 
     }
 }
-
-@Composable
-fun rememberLocationPermissionLauncher(
-    onPermissionGranted: () -> Unit,
-    onPermissionDenied: () -> Unit
-) =
-    rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-        if (fineLocationGranted || coarseLocationGranted) {
-            onPermissionGranted()
-        } else {
-            onPermissionDenied()
-        }
-    }
 
 @Preview(showBackground = true)
 @Composable

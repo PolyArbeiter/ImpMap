@@ -1,10 +1,13 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.graphics.PointF
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -357,6 +360,14 @@ fun MainTopBar(
     viewModel: MapViewModel = hiltViewModel()
 ) {
     val isLoading by viewModel.isLoadingLocation.collectAsState()
+    val locationPermissionLauncher = rememberLocationPermissionLauncher(
+        onPermissionGranted = {
+            viewModel.fetchCurrentLocation()
+        },
+        onPermissionDenied = {
+            //TODO Toast or something idk
+        }
+    )
 
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -390,7 +401,14 @@ fun MainTopBar(
             }
         }
         Button(
-            onClick = { viewModel.fetchCurrentLocation() },
+            onClick = {
+                locationPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    )
+                )
+            },
             enabled = !isLoading
         ) {
             if (isLoading) {
@@ -408,6 +426,24 @@ fun MainTopBar(
     }
 
 }
+
+@Composable
+fun rememberLocationPermissionLauncher(
+    onPermissionGranted: () -> Unit,
+    onPermissionDenied: () -> Unit
+) =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted =
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineLocationGranted || coarseLocationGranted) {
+            onPermissionGranted()
+        } else {
+            onPermissionDenied()
+        }
+    }
 
 private val START_ANIMATION = Animation(Animation.Type.LINEAR, 1f)
 private val SMOOTH_ANIMATION = Animation(Animation.Type.SMOOTH, 0.4f)

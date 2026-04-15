@@ -6,17 +6,20 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import ru.polyarbeiterz.impressionmap.data.dao.HostDao
 import ru.polyarbeiterz.impressionmap.data.dao.ImpressionDao
+import ru.polyarbeiterz.impressionmap.data.dao.MediaDao
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
+import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
 
 @Database(
-    entities = [ImpressionLocal::class, Host::class],
+    entities = [ImpressionLocal::class, MediaLocal::class, Host::class],
     version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun impressionDao(): ImpressionDao
     abstract fun hostDao(): HostDao
+    abstract fun mediaDao(): MediaDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {

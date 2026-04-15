@@ -101,7 +101,7 @@ fun ImpressionsList(
             confirmButton = {
                 Button(
                     onClick = {
-                        impressionsListModel.deleteImp(impressionToDelete!!)
+                        impressionsListModel.deleteImp(impressionToDelete!!.id)
                         impressionToDelete = null
                     }
                 ) {

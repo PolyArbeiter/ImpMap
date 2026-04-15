@@ -2,10 +2,8 @@ package ru.polyarbeiterz.impressionmap.presentation.model
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -30,9 +28,9 @@ class ImpressionsListModel @Inject constructor(
             impressionService.insertAll(imp)
         }
     }
-    fun deleteImp(impression: ImpressionLocal) {
+    fun deleteImp(impressionId: Int) {
         viewModelScope.launch {
-            impressionService.delete(impression)
+            impressionService.delete(impressionId)
         }
     }
 }

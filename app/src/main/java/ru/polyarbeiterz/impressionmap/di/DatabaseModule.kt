@@ -37,4 +37,9 @@ object DatabaseModule {
         database: AppDatabase
     ) = database.hostDao()
 
+    @Provides
+    fun getMediaDao(
+        database: AppDatabase
+    ) = database.mediaDao()
+
 }

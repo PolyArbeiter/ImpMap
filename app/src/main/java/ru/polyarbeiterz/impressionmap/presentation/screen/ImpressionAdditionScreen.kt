@@ -1,6 +1,10 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -37,6 +42,8 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,7 +54,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,6 +66,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
+import ru.polyarbeiterz.impressionmap.data.entity.MediaType
 import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -96,8 +107,10 @@ fun ImpressionAdditionScreen(
 
     val isNew = impressionId == -1
 
+    var currentImpressionId by remember { mutableIntStateOf(impressionId) }
+
     val impression = if (!isNew) {
-        impAdditionModel.getImpById(impressionId).collectAsState(initial = null).value
+        impAdditionModel.getImpById(currentImpressionId).collectAsState(initial = null).value
     } else {
         null
     }
@@ -115,7 +128,8 @@ fun ImpressionAdditionScreen(
         )
     }
 
-//    val mediaList = impAdditionModel.getMediaByImpId(impressionId).collectAsState(initial = null).value
+    val mediaList = impAdditionModel.getMediaByImpId(currentImpressionId)
+        .collectAsState(initial = emptyList()).value
 
     var checkedSendToServer by remember { mutableStateOf(impression?.onServer ?: false) }
 
@@ -127,6 +141,24 @@ fun ImpressionAdditionScreen(
             .format(formatter)
     } ?: "Выберите дату и время"
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = { uris ->
+            uris.forEach { uri ->
+                impAdditionModel.addMediaToImpression(
+                    uri,
+                    MediaType.IMAGE,
+                    impressionId = currentImpressionId
+                )
+            }
+        }
+    )
+
+    fun showMediaPicker() {
+        galleryLauncher.launch("image/*")
+    }
+
+
     if (showDatePicker) {
         DateTimePickerModal(
             initialDateMillis = selectedDateTime,
@@ -137,6 +169,33 @@ fun ImpressionAdditionScreen(
         )
     }
 
+
+    LaunchedEffect(Unit) {
+        if (isNew) {
+            val imp =
+                ImpressionLocal(
+                    latitude = lat,
+                    longitude = lon,
+                    date = selectedDateTime,
+                    title = title ?: "Без названия",
+                    description = description ?: "Без описания",
+                    onServer = checkedSendToServer,
+                )
+            currentImpressionId = impAdditionModel.insertImp(imp).toInt()
+        }
+    }
+
+    var confirmed by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isNew && currentImpressionId != -1 && !confirmed) {
+                impAdditionModel.deleteImp(currentImpressionId)
+            }
+        }
+    }
+
+
     Column() {
         Box() {
             SimpleTopBar(
@@ -144,28 +203,18 @@ fun ImpressionAdditionScreen(
                 headerText = "Добавление".takeIf { isNew } ?: "Редактирование",
                 actionButtonText = "Сохранить",
                 actionButtonOnClick = {
-                    if (isNew) {
-                        impAdditionModel.insertImp(
-                            ImpressionLocal(
-                                latitude = lat,
-                                longitude = lon,
-                                date = selectedDateTime,
-                                title = title ?: "Без названия",
-                                description = description ?: "Без описания",
-                                onServer = checkedSendToServer,
-                            )
+                    confirmed = true
+                    impAdditionModel.updateImp(
+                        ImpressionLocal(
+                            id = currentImpressionId,
+                            latitude = lat,
+                            longitude = lon,
+                            date = selectedDateTime,
+                            title = title ?: "Без названия",
+                            description = description ?: "Без описания",
+                            onServer = checkedSendToServer,
                         )
-                    } else {
-                        impAdditionModel.updateImp(
-                            impression!!.copy(
-                                id = impressionId,
-                                date = selectedDateTime,
-                                title = title ?: "Без названия",
-                                description = description ?: "Без описания",
-                                onServer = checkedSendToServer,
-                            )
-                        )
-                    }
+                    )
                     navController.popBackStack()
                 },
                 actionButtonEnabled = !(title.isNullOrBlank() || description.isNullOrBlank()),
@@ -173,11 +222,9 @@ fun ImpressionAdditionScreen(
                     .align(Alignment.TopCenter)
             )
         }
-
         Column(
             modifier
         ) {
-
             OutlinedTextField(
                 label = { Text(text = "Имя воспоминания") },
                 value = title ?: "",
@@ -249,16 +296,27 @@ fun ImpressionAdditionScreen(
         LazyVerticalGrid(
             GridCells.Adaptive(64.dp), horizontalArrangement = Arrangement.Absolute.Center
         ) {
-//            items(mediaList) { index ->
-//                Box(
-//                    modifier = Modifier.padding(8.dp)
-//                )
-//                Image(
-//                    painter = painterResource(mediaList[index]),
-//                    contentDescription = null,
-//                    modifier = Modifier.size(64.dp)
-//                )
-//            }
+            items(mediaList.size) { index ->
+                val mediaItem = mediaList[index]
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Gray)
+                )
+                if (mediaItem.mediaType == MediaType.IMAGE) {
+                    Image(
+                        bitmap = BitmapFactory.decodeByteArray(
+                            mediaItem.fileData,
+                            0,
+                            mediaItem.fileData.size
+                        ).asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
             item {
                 Box(
                     modifier = Modifier
@@ -266,7 +324,7 @@ fun ImpressionAdditionScreen(
                         .clickable(
                             enabled = true,
                             onClick = {
-//                                TODO("Кнопка должна вызывать функцию добавления файлов")
+                                showMediaPicker()
                             })
                 ) {
                     Icon(

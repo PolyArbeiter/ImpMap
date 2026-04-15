@@ -1,7 +1,6 @@
 package ru.polyarbeiterz.impressionmap.data.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -25,9 +24,12 @@ interface ImpressionDao {
     @Insert
     suspend fun insertAll(vararg impressionLocals: ImpressionLocal)
 
+    @Insert
+    suspend fun insert(impressionLocal: ImpressionLocal): Long
+
     @Update
     suspend fun update(impression: ImpressionLocal)
 
-    @Delete
-    suspend fun delete(impressionLocal: ImpressionLocal)
+    @Query("DELETE FROM impressionlocal WHERE id = :impressionId")
+    suspend fun delete(impressionId: Int)
 }

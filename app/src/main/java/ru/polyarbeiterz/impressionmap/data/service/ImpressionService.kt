@@ -39,7 +39,11 @@ class ImpressionService @Inject constructor(
         impDao.insertAll(*impressionLocals)
     }
 
-    suspend fun delete(imp: ImpressionLocal) {
-        impDao.delete(imp)
+    suspend fun insert(impressionLocal: ImpressionLocal): Long {
+        return impDao.insert(impressionLocal)
+    }
+
+    suspend fun delete(impressionId: Int) {
+        impDao.delete(impressionId)
     }
 }
