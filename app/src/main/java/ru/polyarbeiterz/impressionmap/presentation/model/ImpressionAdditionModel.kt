@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
-import ru.polyarbeiterz.impressionmap.data.entity.MediaType
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.MediaService
 import javax.inject.Inject
@@ -49,7 +48,7 @@ class ImpressionAdditionModel @Inject constructor(
         }
     }
 
-    fun addMediaToImpression(uri: Uri, type: MediaType, impressionId: Int) {
+    fun addMediaToImpression(uri: Uri, type: MediaLocal.MediaType, impressionId: Int) {
         viewModelScope.launch {
             val fileData =
                 context.contentResolver.openInputStream(uri)?.readBytes() ?: return@launch

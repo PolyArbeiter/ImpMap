@@ -78,7 +78,6 @@ import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
-import ru.polyarbeiterz.impressionmap.data.entity.MediaType
 import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -171,6 +170,7 @@ fun ImpressionAdditionScreen(
                 ImpressionLocal(
                     latitude = lat,
                     longitude = lon,
+                    timeCreated = System.currentTimeMillis(),
                     date = selectedDateTime,
                     title = title ?: "Без названия",
                     description = description ?: "Без описания",
@@ -201,6 +201,7 @@ fun ImpressionAdditionScreen(
                     impAdditionModel.updateImp(
                         ImpressionLocal(
                             id = currentImpressionId,
+                            timeModified = System.currentTimeMillis(),
                             latitude = lat,
                             longitude = lon,
                             date = selectedDateTime,
@@ -473,9 +474,9 @@ fun MediaGrid(
             uris.forEach { uri ->
                 val mimeType = context.contentResolver.getType(uri) ?: ""
                 val mediaType = if (mimeType.startsWith("video")) {
-                    MediaType.VIDEO
+                    MediaLocal.MediaType.VIDEO
                 } else {
-                    MediaType.IMAGE
+                    MediaLocal.MediaType.IMAGE
                 }
                 impAdditionModel.addMediaToImpression(
                     uri,
@@ -503,7 +504,7 @@ fun MediaGrid(
             if (success && cameraUri != null) {
                 impAdditionModel.addMediaToImpression(
                     cameraUri!!,
-                    MediaType.IMAGE,
+                    MediaLocal.MediaType.IMAGE,
                     impressionId
                 )
             }
@@ -542,7 +543,8 @@ fun MediaGrid(
         columns = GridCells.Fixed(3),
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(mediaList.size,
+        items(
+            mediaList.size,
             key = { index ->
                 "${mediaList[index].impressionId}:${mediaList[index].id}"
             }) { index ->
@@ -564,7 +566,7 @@ fun MediaGrid(
                         )
                     }
             ) {
-                if (mediaItem.mediaType == MediaType.IMAGE) {
+                if (mediaItem.mediaType == MediaLocal.MediaType.IMAGE) {
                     Image(
                         bitmap = BitmapFactory.decodeByteArray(
                             mediaItem.fileData,

@@ -8,6 +8,8 @@ import androidx.room.PrimaryKey
 data class ImpressionLocal(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "user_id") val userId: Int? = null,
+    @ColumnInfo(name = "time_created") val timeCreated: Long? = null,
+    @ColumnInfo(name = "time_modified") val timeModified: Long? = null,
     @ColumnInfo(name = "latitude") val latitude: Float? = null,
     @ColumnInfo(name = "longitude") val longitude: Float? = null,
     @ColumnInfo(name = "title") val title: String? = "",
