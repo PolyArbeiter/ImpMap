@@ -3,11 +3,15 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 import android.Manifest
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +48,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -71,6 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
+import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaType
 import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
@@ -139,7 +146,8 @@ fun ImpressionAdditionScreen(
     var checkedSendToServer by remember { mutableStateOf(impression?.onServer ?: false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
-    var selectedImage by remember { mutableStateOf<ByteArray?>(null) }
+    var selectedImage by remember { mutableStateOf<MediaLocal?>(null) }
+    var mediaToDelete by remember { mutableStateOf<MediaLocal?>(null) }
 
     val formattedDate = selectedDateTime.let { millis ->
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.getDefault())
@@ -181,7 +189,6 @@ fun ImpressionAdditionScreen(
             }
         }
     }
-
 
     Column() {
         Box() {
@@ -283,12 +290,40 @@ fun ImpressionAdditionScreen(
         MediaGrid(
             context = context,
             impressionId = currentImpressionId,
-            onImageTap = { selectedImage = it })
+            onImageTap = { selectedImage = it },
+            onImageLongPress = { mediaToDelete = it }
+        )
     }
     if (selectedImage != null) {
         FullScreenImageOverlay(
-            imageData = selectedImage!!,
+            imageData = selectedImage!!.fileData,
             onDismiss = { selectedImage = null }
+        )
+    }
+    if (mediaToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { mediaToDelete = null },
+            title = { Text("Удалить медиа?") },
+            text = { Text("Вы уверены, что хотите удалить эту медиа?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        impAdditionModel.deleteMedia(mediaToDelete!!)
+                        mediaToDelete = null
+                    }
+                ) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        mediaToDelete = null
+                    }
+                ) {
+                    Text("Отмена")
+                }
+            }
         )
     }
 }
@@ -417,28 +452,34 @@ fun DateTimePickerModal(
 @Composable
 fun MediaGrid(
     modifier: Modifier = Modifier,
-    onImageTap: (ByteArray) -> Unit,
+    onImageTap: (MediaLocal) -> Unit,
+    onImageLongPress: (MediaLocal) -> Unit,
     context: Context,
     impressionId: Int,
     impAdditionModel: ImpressionAdditionModel = hiltViewModel()
 ) {
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     var showMediaDialog by remember { mutableStateOf(false) }
     val mediaList = impAdditionModel.getMediaByImpId(impressionId)
         .collectAsState(initial = emptyList()).value
 
-    val cameraUri = remember {
-        val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    }
+    var cameraUri by remember { mutableStateOf<Uri?>(Uri.EMPTY) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
         onResult = { uris ->
             uris.forEach { uri ->
+                val mimeType = context.contentResolver.getType(uri) ?: ""
+                val mediaType = if (mimeType.startsWith("video")) {
+                    MediaType.VIDEO
+                } else {
+                    MediaType.IMAGE
+                }
                 impAdditionModel.addMediaToImpression(
                     uri,
-                    MediaType.IMAGE,
+                    mediaType,
                     impressionId = impressionId
                 )
             }
@@ -446,12 +487,22 @@ fun MediaGrid(
         }
     )
 
+    fun createImageFile(): Uri {
+        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val imageFile = File.createTempFile("IMG_", ".jpg", storageDir)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            imageFile
+        )
+    }
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            if (success) {
+            if (success && cameraUri != null) {
                 impAdditionModel.addMediaToImpression(
-                    cameraUri,
+                    cameraUri!!,
                     MediaType.IMAGE,
                     impressionId
                 )
@@ -464,7 +515,8 @@ fun MediaGrid(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             if (granted) {
-                cameraLauncher.launch(cameraUri)
+                cameraUri = createImageFile()
+                cameraLauncher.launch(cameraUri!!)
             }
         }
     )
@@ -490,7 +542,10 @@ fun MediaGrid(
         columns = GridCells.Fixed(3),
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(mediaList.size) { index ->
+        items(mediaList.size,
+            key = { index ->
+                "${mediaList[index].impressionId}:${mediaList[index].id}"
+            }) { index ->
             val mediaItem = mediaList[index]
             Box(
                 modifier = Modifier
@@ -498,7 +553,16 @@ fun MediaGrid(
                     .padding(8.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color.Gray)
-                    .clickable { onImageTap(mediaItem.fileData) }
+                    .indication(
+                        interactionSource = interactionSource,
+                        indication = ripple()
+                    )
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onImageTap(mediaItem) },
+                            onLongPress = { onImageLongPress(mediaItem) }
+                        )
+                    }
             ) {
                 if (mediaItem.mediaType == MediaType.IMAGE) {
                     Image(

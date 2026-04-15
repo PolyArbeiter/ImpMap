@@ -67,4 +67,10 @@ class ImpressionAdditionModel @Inject constructor(
     fun getMediaByImpId(impressionId: Int): Flow<List<MediaLocal>> {
         return mediaService.getByImpressionId(impressionId)
     }
+
+    fun deleteMedia(mediaItem: MediaLocal) {
+        viewModelScope.launch {
+            mediaService.delete(mediaItem)
+        }
+    }
 }

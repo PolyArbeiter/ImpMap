@@ -13,7 +13,7 @@ class MediaService @Inject constructor(
     private val mediaDao: MediaDao
 ) {
     fun getByImpressionId(impressionId: Int): Flow<List<MediaLocal>> {
-        return mediaDao.getMediaByImpId(impressionId)
+        return mediaDao.getByImpId(impressionId)
             .catch { e ->
                 Log.e("DATABASE", "Error reading media for impression ID=$impressionId", e)
             }
@@ -32,6 +32,6 @@ class MediaService @Inject constructor(
     }
 
     suspend fun deleteByImpressionId(impressionId: Int) {
-        mediaDao.deleteMediaByImpId(impressionId)
+        mediaDao.deleteByImpId(impressionId)
     }
 }
