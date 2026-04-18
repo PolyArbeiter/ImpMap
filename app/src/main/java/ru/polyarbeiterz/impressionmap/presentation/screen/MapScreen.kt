@@ -2,10 +2,16 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.Manifest
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PointF
+import android.location.LocationManager
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -62,19 +68,56 @@ import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 
 @Composable
 fun MapComposable(navController: NavController) {
+    val context = LocalContext.current
+    val mapViewModel = hiltViewModel<MapViewModel>()
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    var locationEnabled by remember { mutableStateOf(locationManager.isLocationEnabled) }
+    val locationPermissionLauncher = rememberLocationPermissionLauncher(
+        onPermissionGranted = {
+            if (locationEnabled)
+                mapViewModel.fetchCurrentLocation()
+            else
+                Toast.makeText(context, "Geolocation service must be turned on", Toast.LENGTH_SHORT)
+                    .show()
+        },
+        onPermissionDenied = {
+            Toast.makeText(
+                context,
+                "You must give access to fine location to use this feature",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    )
+
+    DisposableEffect(Unit) {
+        val locationReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
+                    locationEnabled = locationManager.isLocationEnabled
+                }
+            }
+        }
+
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        context.registerReceiver(locationReceiver, filter)
+
+        onDispose {
+            context.unregisterReceiver(locationReceiver)
+        }
+    }
+
     ImpressionMapTheme {
-        MapInteractionScreen(
-            navController,
-            LocalContext.current,
-        )
+        MapInteractionScreen(navController, context, locationPermissionLauncher)
     }
 }
+
 
 
 @Composable
 fun MapInteractionScreen(
     navController: NavController,
     context: Context,
+    locationPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     modifier: Modifier = Modifier,
     mapViewModel: MapViewModel = hiltViewModel()
 ) {
@@ -245,7 +288,8 @@ fun MapInteractionScreen(
             modifier = modifier.fillMaxSize()
         )
         MainTopBar(
-            navController,
+            navController = navController,
+            locationPermissionLauncher = locationPermissionLauncher,
             modifier = modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 12.dp)
@@ -364,18 +408,11 @@ fun MapControls(
 @Composable
 fun MainTopBar(
     navController: NavController,
+    locationPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     modifier: Modifier,
     mapViewModel: MapViewModel = hiltViewModel()
 ) {
     val isLoading by mapViewModel.isLoadingLocation.collectAsState()
-    val locationPermissionLauncher = rememberLocationPermissionLauncher(
-        onPermissionGranted = {
-            mapViewModel.fetchCurrentLocation()
-        },
-        onPermissionDenied = {
-            //TODO Toast or something idk
-        }
-    )
 
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
