@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
@@ -82,11 +83,14 @@ import ru.polyarbeiterz.impressionmap.presentation.components.SimpleTopBar
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionAdditionModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 import java.io.File
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.Locale
+import java.util.Objects
 
 @Composable
 fun ImpressionAdditionComposable(
@@ -466,7 +470,15 @@ fun MediaGrid(
     val mediaList = impAdditionModel.getMediaByImpId(impressionId)
         .collectAsState(initial = emptyList()).value
 
-    var cameraUri by remember { mutableStateOf<Uri?>(Uri.EMPTY) }
+    val file = context.createImageFile()
+    val uri = FileProvider.getUriForFile(
+        Objects.requireNonNull(context),
+        BuildConfig.APPLICATION_ID + ".provider", file
+    )
+
+    var capturedImageUri by remember {
+        mutableStateOf<Uri>(Uri.EMPTY)
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
@@ -488,22 +500,13 @@ fun MediaGrid(
         }
     )
 
-    fun createImageFile(): Uri {
-        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        val imageFile = File.createTempFile("IMG_", ".jpg", storageDir)
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.provider",
-            imageFile
-        )
-    }
-
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            if (success && cameraUri != null) {
+            if (success) {
+                capturedImageUri = uri
                 impAdditionModel.addMediaToImpression(
-                    cameraUri!!,
+                    capturedImageUri,
                     MediaLocal.MediaType.IMAGE,
                     impressionId
                 )
@@ -516,8 +519,9 @@ fun MediaGrid(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             if (granted) {
-                cameraUri = createImageFile()
-                cameraLauncher.launch(cameraUri!!)
+                cameraLauncher.launch(uri)
+            } else {
+                Toast.makeText(context, "Permission was denied", Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -541,7 +545,7 @@ fun MediaGrid(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         items(
             mediaList.size,
@@ -622,6 +626,17 @@ fun FullScreenImageOverlay(imageData: ByteArray, onDismiss: () -> Unit) {
             contentScale = ContentScale.Fit
         )
     }
+}
+
+fun Context.createImageFile(): File {
+    // Create an image file name
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+    val imageFileName = "JPEG_" + timeStamp + "_"
+    return File.createTempFile(
+        imageFileName, /* prefix */
+        ".jpg", /* suffix */
+        externalCacheDir /* directory */
+    )
 }
 
 

@@ -2,6 +2,7 @@ package ru.polyarbeiterz.impressionmap.presentation
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -66,8 +67,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        try {
+            MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
+        } catch (e: AssertionError) {
+            Log.i("MAPKIT", "Trying to set API Key after MapKit was already initialized")
+        }
 
-        MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
         MapKitFactory.initialize(this)
 
         setContent {
@@ -138,7 +143,13 @@ fun ChoiceScreenComposable(
     mainActivityModel: MainActivityModel = hiltViewModel()
 ) {
 
-    val selectedHost by mainActivityModel.selectedHost.collectAsState(initial = Host(name = "loading", ip = "", port = -2))
+    val selectedHost by mainActivityModel.selectedHost.collectAsState(
+        initial = Host(
+            name = "loading",
+            ip = "",
+            port = -2
+        )
+    )
 
     LaunchedEffect(selectedHost) {
         if (selectedHost?.name != "loading" && selectedHost?.port != -2 && selectedHost != null) {

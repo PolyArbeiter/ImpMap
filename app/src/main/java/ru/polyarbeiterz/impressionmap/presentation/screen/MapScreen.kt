@@ -8,12 +8,14 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -74,16 +76,16 @@ fun MapInteractionScreen(
     navController: NavController,
     context: Context,
     modifier: Modifier = Modifier,
-    viewModel: MapViewModel = hiltViewModel()
+    mapViewModel: MapViewModel = hiltViewModel()
 ) {
 
     var showExitConfirmation by remember { mutableStateOf(false) }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by mapViewModel.uiState.collectAsState()
 
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
 
-    val impressionsList = viewModel.allImpressions.collectAsState().value
+    val impressionsList = mapViewModel.allImpressions.collectAsState().value
 
     DisposableEffect(Unit) {
         onDispose {
@@ -92,13 +94,13 @@ fun MapInteractionScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.viewModelScope.launch {
+        mapViewModel.viewModelScope.launch {
             // get remote impressions and sync with them
             try {
-                viewModel.retrofitService.getAllImpressions()
+                mapViewModel.retrofitService.getAllImpressions()
                     .takeIf { it.isSuccessful }
                     .apply {
-                        viewModel.synchronizerService.synchronize(
+                        mapViewModel.synchronize(
                             impressionsList.map { it.toServerDto() },
                             this?.body() ?: emptyList()
                         )
@@ -112,7 +114,7 @@ fun MapInteractionScreen(
     LaunchedEffect(impressionsList.size) {
         // reflect all placemarks
         impressionsList.forEach { imp ->
-            viewModel.createPlacemark(
+            mapViewModel.createPlacemark(
                 Point(imp.latitude!!.toDouble(), imp.longitude!!.toDouble())
             )
         }
@@ -145,19 +147,19 @@ fun MapInteractionScreen(
         AndroidView(
             factory = { ctx ->
                 MapView(ctx).apply {
-                    viewModel.setMapView(this)
+                    mapViewModel.setMapView(this)
 
                     val map = this.mapWindow.map
                     val mapWindow = this.mapWindow
 
                     mapWindow.addSizeChangedListener(
-                        { _, _, _ -> viewModel.updateFocusInfo() }
+                        { _, _, _ -> mapViewModel.updateFocusInfo() }
                     )
-                    viewModel.updateFocusInfo()
+                    mapViewModel.updateFocusInfo()
 
                     // set initial position (dirty)
-                    viewModel.viewModelScope.launch {
-                        val loc = viewModel.locationService.getCurrentLocation()
+                    mapViewModel.viewModelScope.launch {
+                        val loc = mapViewModel.locationService.getCurrentLocation()
                         val point = Point(
                             loc?.latitude ?: START_POSITION.target.latitude,
                             loc?.latitude ?: START_POSITION.target.latitude
@@ -176,7 +178,7 @@ fun MapInteractionScreen(
 
         MapControls(
             onZoomIn = {
-                viewModel.getMap()?.let { map ->
+                mapViewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
                     map.move(
                         CameraPosition(pos.target, pos.zoom + ZOOM_STEP, pos.azimuth, pos.tilt),
@@ -186,7 +188,7 @@ fun MapInteractionScreen(
                 }
             },
             onZoomOut = {
-                viewModel.getMap()?.let { map ->
+                mapViewModel.getMap()?.let { map ->
                     val pos = map.cameraPosition
                     map.move(
                         CameraPosition(pos.target, pos.zoom - ZOOM_STEP, pos.azimuth, pos.tilt),
@@ -201,14 +203,14 @@ fun MapInteractionScreen(
                     // move and existing placemark
                     placemarkMapObject?.setVisible(true)
                     val focusPoint =
-                        viewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
+                        mapViewModel.uiState.value.mapView?.mapWindow?.focusPoint ?: return@apply
                     val point =
-                        viewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint)
+                        mapViewModel.uiState.value.mapView?.mapWindow?.screenToWorld(focusPoint)
                             ?: return@apply
                     placemarkMapObject?.geometry = point
-                } ?: viewModel.getMap()!!.mapObjects.addPlacemark().apply {
+                } ?: mapViewModel.getMap()!!.mapObjects.addPlacemark().apply {
                     // create placemark if null
-                    geometry = viewModel.getMap()!!.cameraPosition.target
+                    geometry = mapViewModel.getMap()!!.cameraPosition.target
                     setIcon(
                         ImageProvider.fromResource(context, R.drawable.marker_down),
                         IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
@@ -224,13 +226,13 @@ fun MapInteractionScreen(
                 )
             },
             onUpdateImpressions = {
-                viewModel.viewModelScope.launch {
+                mapViewModel.viewModelScope.launch {
                     // get remote impressions and sync with them
                     try {
-                        viewModel.retrofitService.getAllImpressions()
+                        mapViewModel.retrofitService.getAllImpressions()
                             .takeIf { it.isSuccessful }
                             .apply {
-                                viewModel.synchronizerService.synchronize(
+                                mapViewModel.synchronize(
                                     impressionsList.map { it.toServerDto() },
                                     this?.body() ?: emptyList()
                                 )
@@ -271,9 +273,10 @@ fun MapControls(
     onStartImpCreation: (Float, Float) -> Unit,
     onUpdateImpressions: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MapViewModel = hiltViewModel()
+    mapViewModel: MapViewModel = hiltViewModel()
 ) {
     var selectPointMode by remember { mutableStateOf(false) }
+    val shouldSync by mapViewModel.shouldSync.collectAsState(initial = true)
 
     Box(modifier = modifier) {
         // Zoom Controls - Right side
@@ -302,52 +305,57 @@ fun MapControls(
                     contentDescription = null,
                 )
             }
+        }
 
+        if (shouldSync)
+            Icon(
+                painter = painterResource(R.drawable.update),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(48.dp)
+                    .navigationBarsPadding()
+                    .align(Alignment.BottomStart)
+                    .clickable(onClick = onUpdateImpressions)
+            )
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             if (!selectPointMode) {
                 // Usual mode
-                FloatingActionButton(
-                    onClick = { onCreatePlacemark(); selectPointMode = true },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.new_box),
-                        contentDescription = null,
-                    )
-                }
-                FloatingActionButton(
-                    onClick = onUpdateImpressions,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.update),
-                        contentDescription = null,
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.plus),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(onClick = { onCreatePlacemark(); selectPointMode = true })
+                )
             } else {
                 // Confirm selected point or not
-                FloatingActionButton(
-                    onClick = {
-                        onStartImpCreation(
-                            viewModel.getCameraPositionTarget().latitude.toFloat(),
-                            viewModel.getCameraPositionTarget().longitude.toFloat()
-                        )
-                    },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.check),
-                        contentDescription = null,
-                    )
-                }
-                FloatingActionButton(
-                    onClick = { onRejectPlaceMark(); selectPointMode = false },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.cross_bolnisi),
-                        contentDescription = null,
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.cross_bolnisi),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(onClick = { onRejectPlaceMark(); selectPointMode = false })
+
+                )
+                Icon(
+                    painter = painterResource(R.drawable.check),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(onClick = {
+                            onStartImpCreation(
+                                mapViewModel.getCameraPositionTarget().latitude.toFloat(),
+                                mapViewModel.getCameraPositionTarget().longitude.toFloat()
+                            )
+                        })
+                )
             }
         }
     }
@@ -357,12 +365,12 @@ fun MapControls(
 fun MainTopBar(
     navController: NavController,
     modifier: Modifier,
-    viewModel: MapViewModel = hiltViewModel()
+    mapViewModel: MapViewModel = hiltViewModel()
 ) {
-    val isLoading by viewModel.isLoadingLocation.collectAsState()
+    val isLoading by mapViewModel.isLoadingLocation.collectAsState()
     val locationPermissionLauncher = rememberLocationPermissionLauncher(
         onPermissionGranted = {
-            viewModel.fetchCurrentLocation()
+            mapViewModel.fetchCurrentLocation()
         },
         onPermissionDenied = {
             //TODO Toast or something idk

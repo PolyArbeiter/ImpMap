@@ -14,6 +14,9 @@ import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.MediaService
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -71,5 +74,17 @@ class ImpressionAdditionModel @Inject constructor(
         viewModelScope.launch {
             mediaService.delete(mediaItem)
         }
+    }
+
+    fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val imageFileName = "JPEG_" + timeStamp + "_"
+        val image = File.createTempFile(
+            imageFileName, /* prefix */
+            ".jpg", /* suffix */
+            context.externalCacheDir      /* directory */
+        )
+        return image
     }
 }

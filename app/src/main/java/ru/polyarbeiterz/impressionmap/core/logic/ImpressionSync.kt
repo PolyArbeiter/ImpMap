@@ -20,8 +20,9 @@ fun List<ImpressionLocal>.filterAndSaveImpressionsWithCoords(
 @Singleton
 class ImpressionSynchronizer @Inject constructor(
     val retrofitService: ImpressionBackendService,
-    val impressionService: ImpressionService
+    val impressionService: ImpressionService,
 ) {
+
     suspend fun synchronize(
         local: Iterable<ImpressionDto>,
         remote: Iterable<ImpressionDto>

@@ -14,15 +14,21 @@ import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.logic.ImpressionSynchronizer
+import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
+import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
+import ru.polyarbeiterz.impressionmap.data.dto.ImpressionDto
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
@@ -40,7 +46,7 @@ class MapViewModel @Inject constructor(
     val locationService: LocationService,
     val impressionService: ImpressionService,
     val retrofitService: ImpressionBackendService,
-    val synchronizerService: ImpressionSynchronizer
+    val synchronizerService: ImpressionSynchronizer,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -50,6 +56,7 @@ class MapViewModel @Inject constructor(
 
     val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     fun setMapView(mapView: MapView?) {
         _uiState.update { it.copy(mapView = mapView) }
     }
@@ -121,4 +128,19 @@ class MapViewModel @Inject constructor(
             )
         }
     }
+
+    suspend fun synchronize(
+        local: Iterable<ImpressionDto>,
+        remote: Iterable<ImpressionDto>
+    ) {
+        if (!shouldSync.first()) return
+        synchronizerService.synchronize(local, remote)
+    }
+
+    val shouldSync: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            val ip = preferences[PreferencesKeys.SELECTED_HOST_IP] != "127.0.0.1"
+            val port = preferences[PreferencesKeys.SELECTED_HOST_PORT] != -1
+            ip && port
+        }
 }
