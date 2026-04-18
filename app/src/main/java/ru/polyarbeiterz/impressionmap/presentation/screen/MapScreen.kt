@@ -22,12 +22,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -47,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,6 +61,7 @@ import com.yandex.mapkit.Animation
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.IconStyle
+import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
@@ -69,6 +75,36 @@ import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 @Composable
 fun MapComposable(navController: NavController) {
     val context = LocalContext.current
+    ImpressionMapTheme {
+        MapInteractionScreen(navController, context)
+    }
+}
+
+private var inputListener: InputListener? = null
+
+@Composable
+fun MapInteractionScreen(
+    navController: NavController,
+    context: Context,
+    modifier: Modifier = Modifier,
+    mapViewModel: MapViewModel = hiltViewModel()
+) {
+
+    var showExitConfirmation by remember { mutableStateOf(false) }
+
+    val uiState by mapViewModel.uiState.collectAsState()
+
+    var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
+
+    val impressionsList = mapViewModel.allImpressions.collectAsState().value
+
+    val shouldSync by mapViewModel.shouldSync.collectAsState(initial = null)
+
+    if (shouldSync == null) {
+        CircularProgressIndicator()
+        return
+    }
+
     val mapViewModel = hiltViewModel<MapViewModel>()
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     var locationEnabled by remember { mutableStateOf(locationManager.isLocationEnabled) }
@@ -103,61 +139,34 @@ fun MapComposable(navController: NavController) {
 
         onDispose {
             context.unregisterReceiver(locationReceiver)
-        }
-    }
-
-    ImpressionMapTheme {
-        MapInteractionScreen(navController, context, locationPermissionLauncher)
-    }
-}
-
-
-
-@Composable
-fun MapInteractionScreen(
-    navController: NavController,
-    context: Context,
-    locationPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
-    modifier: Modifier = Modifier,
-    mapViewModel: MapViewModel = hiltViewModel()
-) {
-
-    var showExitConfirmation by remember { mutableStateOf(false) }
-
-    val uiState by mapViewModel.uiState.collectAsState()
-
-    var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
-
-    val impressionsList = mapViewModel.allImpressions.collectAsState().value
-
-    DisposableEffect(Unit) {
-        onDispose {
             uiState.mapView?.onStop()
         }
     }
 
     LaunchedEffect(Unit) {
-        mapViewModel.viewModelScope.launch {
-            // get remote impressions and sync with them
-            try {
-                mapViewModel.retrofitService.getAllImpressions()
-                    .takeIf { it.isSuccessful }
-                    .apply {
-                        mapViewModel.synchronize(
-                            impressionsList.map { it.toServerDto() },
-                            this?.body() ?: emptyList()
-                        )
-                    }
-            } catch (e: Exception) {
-                Log.e("NETWORK", "Could not sync with remote server")
+        if (shouldSync!!) {
+            mapViewModel.viewModelScope.launch {
+                // get remote impressions and sync with them
+                try {
+                    mapViewModel.retrofitService.getAllImpressions()
+                        .takeIf { it.isSuccessful }
+                        .apply {
+                            mapViewModel.synchronize(
+                                impressionsList.map { it.toServerDto() },
+                                this?.body() ?: emptyList()
+                            )
+                        }
+                } catch (e: Exception) {
+                    Log.e("NETWORK", "Could not sync with remote server")
+                }
             }
         }
     }
 
     LaunchedEffect(impressionsList.size) {
-        // reflect all placemarks
         impressionsList.forEach { imp ->
             mapViewModel.createPlacemark(
+                imp.id,
                 Point(imp.latitude!!.toDouble(), imp.longitude!!.toDouble())
             )
         }
@@ -199,6 +208,25 @@ fun MapInteractionScreen(
                         { _, _, _ -> mapViewModel.updateFocusInfo() }
                     )
                     mapViewModel.updateFocusInfo()
+
+                    if (inputListener == null) {
+                        inputListener = object : InputListener {
+                            override fun onMapTap(
+                                mapWindow: com.yandex.mapkit.map.Map,
+                                point: Point
+                            ) {
+                                mapViewModel.deselectImpression()
+                            }
+
+                            override fun onMapLongTap(
+                                p0: com.yandex.mapkit.map.Map,
+                                point: Point
+                            ) {
+                            }
+                        }
+                    }
+
+                    map.addInputListener(inputListener!!)
 
                     // set initial position (dirty)
                     mapViewModel.viewModelScope.launch {
@@ -269,19 +297,21 @@ fun MapInteractionScreen(
                 )
             },
             onUpdateImpressions = {
-                mapViewModel.viewModelScope.launch {
-                    // get remote impressions and sync with them
-                    try {
-                        mapViewModel.retrofitService.getAllImpressions()
-                            .takeIf { it.isSuccessful }
-                            .apply {
-                                mapViewModel.synchronize(
-                                    impressionsList.map { it.toServerDto() },
-                                    this?.body() ?: emptyList()
-                                )
-                            }
-                    } catch (e: Exception) {
-                        Log.e("NETWORK", "Could not sync with remote server")
+                if (shouldSync!!) {
+                    mapViewModel.viewModelScope.launch {
+                        // get remote impressions and sync with them
+                        try {
+                            mapViewModel.retrofitService.getAllImpressions()
+                                .takeIf { it.isSuccessful }
+                                .apply {
+                                    mapViewModel.synchronize(
+                                        impressionsList.map { it.toServerDto() },
+                                        this?.body() ?: emptyList()
+                                    )
+                                }
+                        } catch (e: Exception) {
+                            Log.e("NETWORK", "Could not sync with remote server")
+                        }
                     }
                 }
             },
@@ -303,6 +333,32 @@ fun MapInteractionScreen(
             modifier = modifier
                 .align(Alignment.BottomCenter)
         )
+
+        mapViewModel.uiState.collectAsState().value.selectedImpressionId?.let { selectedId ->
+            val selectedImpression = impressionsList.find { it.id == selectedId }
+            selectedImpression?.let {
+                val screenPos = mapViewModel.getPlacemarkScreenPosition(selectedId)
+                screenPos?.let { offset ->
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = 80.dp)
+                            .navigationBarsPadding()
+                            .width(200.dp)
+                            .padding(8.dp)
+                            .clickable(
+                                onClick = { navController.navigate("impression_addition/${it.id}") },
+                            ),
+                        elevation = cardElevation(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(it.title ?: "No title", fontWeight = FontWeight.Bold)
+                            Text(it.description ?: "")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -352,15 +408,22 @@ fun MapControls(
         }
 
         if (shouldSync)
-            Icon(
-                painter = painterResource(R.drawable.update),
-                contentDescription = null,
+            Column(
                 modifier = Modifier
-                    .size(48.dp)
-                    .navigationBarsPadding()
                     .align(Alignment.BottomStart)
-                    .clickable(onClick = onUpdateImpressions)
-            )
+                    .padding(end = 16.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.update),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .navigationBarsPadding()
+                        .clickable(onClick = onUpdateImpressions)
+                )
+            }
 
         Column(
             modifier = Modifier
