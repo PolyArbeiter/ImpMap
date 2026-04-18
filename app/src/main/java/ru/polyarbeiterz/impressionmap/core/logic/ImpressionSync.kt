@@ -1,10 +1,11 @@
 package ru.polyarbeiterz.impressionmap.core.logic
 
 import ru.polyarbeiterz.impressionmap.core.utils.toLocal
-import ru.polyarbeiterz.impressionmap.data.dto.ImpressionDto
+import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
+import ru.polyarbeiterz.impressionmap.data.service.MediaService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,18 +22,28 @@ fun List<ImpressionLocal>.filterAndSaveImpressionsWithCoords(
 class ImpressionSynchronizer @Inject constructor(
     val retrofitService: ImpressionBackendService,
     val impressionService: ImpressionService,
+    val mediaService: MediaService
 ) {
+    suspend fun synchronizeImpressions(now: List<ImpressionLocal>) {
+        // get remote and local
+        val remote = retrofitService.getAllImpressions().body() ?: emptySet()
+        val local = now.map { it.toServerDto() }.toSet()
 
-    suspend fun synchronize(
-        local: Iterable<ImpressionDto>,
-        remote: Iterable<ImpressionDto>
-    ) {
-        local.filter { !remote.contains(it) && it.onServer }.forEach {
-            retrofitService.createImpression(it)
+        // get sync
+        val same = remote.intersect(local)
+
+        // set local not sync
+        local.filter { imp ->
+            !same.contains(imp) && imp.onServer
+        }.forEach { imp ->
+            retrofitService.createImpression(imp)
         }
 
-        remote.filter { imp -> !local.filter { it.onServer }.contains(imp) }.forEach {
-            impressionService.insertAll(it.toLocal())
+        // save remote not sync
+        remote.filter { imp ->
+            !same.contains(imp)
+        }.forEach { imp ->
+            impressionService.insertAll(imp.toLocal())
         }
     }
 }

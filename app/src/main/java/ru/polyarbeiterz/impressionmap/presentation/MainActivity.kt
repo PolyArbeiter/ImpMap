@@ -235,7 +235,6 @@ fun ChoiceDialog(
     )
     var showAdditionModal by remember { mutableStateOf(false) }
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
-    var isCheckingConnection by remember { mutableStateOf(false) }
     var showConnectionError by remember { mutableStateOf(false) }
 
     if (hostToDelete != null) {
@@ -328,7 +327,6 @@ fun ChoiceDialog(
                             cardDescription = "IP: " + el.ip + ", порт: " + el.port,
                             onClick = {
                                 mainActivityModel.viewModelScope.launch {
-                                    isCheckingConnection = true
                                     val url = "http://${el.ip}:${el.port}"
                                     val isReachable = if (el.ip == "127.0.0.1") {
                                         true
@@ -336,17 +334,13 @@ fun ChoiceDialog(
                                         val url = "http://${el.ip}:${el.port}"
                                         mainActivityModel.checkServerConnection(url)
                                     }
-                                    isCheckingConnection = false
-
-                                    mainActivityModel.selectHost(el)
-                                    mainActivityModel.urlManager.updateUrl(url)
                                     // make ping handler for healthcheck of server
-//                                    if (isReachable) {
-//                                        mainActivityModel.selectHost(el)
-//                                        mainActivityModel.urlManager.updateUrl(url)
-//                                    } else {
-//                                        showConnectionError = true
-//                                    }
+                                    if (isReachable) {
+                                        mainActivityModel.selectHost(el)
+                                        mainActivityModel.urlManager.updateUrl(url)
+                                    } else {
+                                        showConnectionError = true
+                                    }
                                 }
                             },
                             onLongPress = { hostToDelete = el },

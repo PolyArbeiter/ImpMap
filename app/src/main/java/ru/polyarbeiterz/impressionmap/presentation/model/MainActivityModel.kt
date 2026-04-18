@@ -1,10 +1,12 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
 import android.app.Application
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
@@ -101,18 +104,22 @@ class MainActivityModel @Inject constructor(
         }
     }
 
-    fun checkServerConnection(url: String): Boolean {
-        return try {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .build()
-            val request = Request.Builder()
-                .url(url)
-                .head()
-                .build()
-            client.newCall(request).execute().isSuccessful
-        } catch (e: Exception) {
-            false
+    suspend fun checkServerConnection(url: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .build()
+                val request = Request.Builder()
+                    .url(url + "/api/v1/impressions/impressions/")
+                    .head()
+                    .build()
+                val response = client.newCall(request).execute()
+                response.code() == 403
+            } catch (e: Exception) {
+                Log.e("PING_SERVER", e.message.toString())
+                false
+            }
         }
     }
 }

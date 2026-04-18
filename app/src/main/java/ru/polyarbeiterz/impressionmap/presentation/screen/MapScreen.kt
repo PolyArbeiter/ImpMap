@@ -67,7 +67,6 @@ import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
-import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
 import ru.polyarbeiterz.impressionmap.presentation.components.BottomNavBar
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -139,28 +138,41 @@ fun MapInteractionScreen(
 
         onDispose {
             context.unregisterReceiver(locationReceiver)
+        }
+    }
+
+    ImpressionMapTheme {
+        MapInteractionScreen(navController, context, locationPermissionLauncher)
+    }
+}
+
+
+
+@Composable
+fun MapInteractionScreen(
+    navController: NavController,
+    context: Context,
+    locationPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+    modifier: Modifier = Modifier,
+    mapViewModel: MapViewModel = hiltViewModel()
+) {
+
+    var showExitConfirmation by remember { mutableStateOf(false) }
+
+    val uiState by mapViewModel.uiState.collectAsState()
+
+    var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
+
+    val impressionsList by mapViewModel.allImpressions.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
             uiState.mapView?.onStop()
         }
     }
 
     LaunchedEffect(Unit) {
-        if (shouldSync!!) {
-            mapViewModel.viewModelScope.launch {
-                // get remote impressions and sync with them
-                try {
-                    mapViewModel.retrofitService.getAllImpressions()
-                        .takeIf { it.isSuccessful }
-                        .apply {
-                            mapViewModel.synchronize(
-                                impressionsList.map { it.toServerDto() },
-                                this?.body() ?: emptyList()
-                            )
-                        }
-                } catch (e: Exception) {
-                    Log.e("NETWORK", "Could not sync with remote server")
-                }
-            }
-        }
+        mapViewModel.updateUrl()
     }
 
     LaunchedEffect(impressionsList.size) {
@@ -297,21 +309,12 @@ fun MapInteractionScreen(
                 )
             },
             onUpdateImpressions = {
-                if (shouldSync!!) {
-                    mapViewModel.viewModelScope.launch {
-                        // get remote impressions and sync with them
-                        try {
-                            mapViewModel.retrofitService.getAllImpressions()
-                                .takeIf { it.isSuccessful }
-                                .apply {
-                                    mapViewModel.synchronize(
-                                        impressionsList.map { it.toServerDto() },
-                                        this?.body() ?: emptyList()
-                                    )
-                                }
-                        } catch (e: Exception) {
-                            Log.e("NETWORK", "Could not sync with remote server")
-                        }
+                mapViewModel.viewModelScope.launch {
+                    // get remote impressions and sync with them
+                    try {
+                        mapViewModel.synchronizerService.synchronizeImpressions(impressionsList)
+                    } catch (e: Exception) {
+                        Log.e("NETWORK", "Could not sync with remote server")
                     }
                 }
             },
