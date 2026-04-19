@@ -1,10 +1,15 @@
 package ru.polyarbeiterz.impressionmap.data.service
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import ru.polyarbeiterz.impressionmap.data.dto.ImpressionResponse
 import ru.polyarbeiterz.impressionmap.data.dto.LoginRequest
@@ -22,35 +27,32 @@ interface ImpressionBackendService {
     ] )
     suspend fun getAllImpressions(): Response<List<ImpressionResponse>>
 
-    @GET("")
+    @GET("{image_path}")
     @Headers( value = [
-        "Accept-Encoding: gzip,deflate",
-        "Content-Type: Image/Jpeg;charset=UTF-8",
-        "Accept: Image/Jpeg",
+        "Content-Type: image/jpeg;charset=UTF-8",
         "User-Agent: Retrofit 2.9.0",
     ] )
-    suspend fun getImage(@Path("image_path") imagePath: String): Response<Any>
+    suspend fun getImage(@Path("image_path") imagePath: String): Response<ResponseBody>
 
-    @GET("")
+    @GET("{video_path}")
     @Headers( value = [
-        "Accept-Encoding: gzip,deflate",
-        "Content-Type: Video/Mp4;charset=UTF-8",
-        "Accept: Video/Mp4",
+        "Content-Type: video/mp4;charset=UTF-8",
         "User-Agent: Retrofit 2.9.0",
     ] )
-    suspend fun getVideo(@Path("video_path") videoPath: String): Response<Any>
+    suspend fun getVideo(@Path("video_path") videoPath: String): Response<ResponseBody>
 
-    @GET("api/v1/impressions/impression/{id}")
-    suspend fun getImpressionById(@Path("id") id: Int): Response<ImpressionResponse>
 
+    @Multipart
     @POST("api/v1/impressions/impressions/")
-    @Headers( value = [
-        "Accept-Encoding: gzip,deflate",
-        "Content-Type: Application/Json;charset=UTF-8",
-        "Accept: Application/Json",
-        "User-Agent: Retrofit 2.9.0",
-    ] )
-    suspend fun createImpression(@Body impressionResponse: ImpressionResponse): Response<ImpressionResponse>
+    suspend fun createImpression(
+        @Part("local_id") localId: RequestBody,
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("latitude") latitude: RequestBody,
+        @Part("longitude") longitude: RequestBody,
+        @Part("date") date: RequestBody,
+        media: List<MultipartBody.Part>
+    )
 
     @POST("api/v1/auth/login/")
     @Headers( value = [

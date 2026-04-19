@@ -12,11 +12,15 @@ import javax.inject.Singleton
 class MediaService @Inject constructor(
     private val mediaDao: MediaDao
 ) {
-    fun getByImpressionId(impressionId: Int): Flow<List<MediaLocal>> {
-        return mediaDao.getByImpId(impressionId)
+    fun getByImpressionIdFlow(impressionId: Int): Flow<List<MediaLocal>> {
+        return mediaDao.getByImpIdFlow(impressionId)
             .catch { e ->
                 Log.e("DATABASE", "Error reading media for impression ID=$impressionId", e)
             }
+    }
+
+    suspend fun getByImpressionId(impressionId: Int): List<MediaLocal> {
+        return mediaDao.getByImpId(impressionId)
     }
 
     suspend fun insert(mediaItem: MediaLocal): Long {

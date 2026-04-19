@@ -1,8 +1,8 @@
 package ru.polyarbeiterz.impressionmap.data.dto
 
 
-data class MediaDto(
+data class MediaResponse(
     val id: Long,
     val file: String,
-    val is_video: Boolean
+    val isVideo: Boolean
 )

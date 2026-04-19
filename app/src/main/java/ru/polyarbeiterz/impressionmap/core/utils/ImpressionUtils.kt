@@ -1,8 +1,5 @@
 package ru.polyarbeiterz.impressionmap.core.utils
 
-import ru.polyarbeiterz.impressionmap.data.dto.ImpressionResponse
-import ru.polyarbeiterz.impressionmap.data.dto.MediaDto
-import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import java.sql.Date
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -11,29 +8,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
-
-fun ImpressionResponse.toLocal(): ImpressionLocal =
-    ImpressionLocal(
-        latitude = this.latitude,
-        longitude = this.longitude,
-        date = formatDateForLocal(this.date),
-        title = this.title,
-        description = this.description,
-        onServer = true,
-    )
-
-fun ImpressionLocal.toServerDto(
-    media: List<MediaDto> = emptyList()
-): ImpressionResponse =
-    ImpressionResponse(
-        latitude = this.latitude,
-        longitude = this.longitude,
-        date = formatDateForServer(this.date),
-        title = this.title,
-        description = this.description,
-        onServer = this.onServer,
-        media = media,
-    )
 
 fun formatDateForServer(timestamp: Long?): String {
     val millis = timestamp ?: System.currentTimeMillis()

@@ -77,7 +77,7 @@ class MapViewModel @Inject constructor(
     }
 
 
-    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
+    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAllFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),emptyList())
     fun setMapView(mapView: MapView?) {
         _uiState.update { it.copy(mapView = mapView) }

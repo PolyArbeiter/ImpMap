@@ -13,7 +13,11 @@ import javax.inject.Singleton
 class ImpressionService @Inject constructor(
     private val impDao: ImpressionDao
 ) {
-    fun getAll(): Flow<List<ImpressionLocal>> {
+    fun getAllFlow(): Flow<List<ImpressionLocal>> {
+        return impDao.getAllFlow()
+    }
+
+    suspend fun getAll(): List<ImpressionLocal> {
         return impDao.getAll()
     }
 

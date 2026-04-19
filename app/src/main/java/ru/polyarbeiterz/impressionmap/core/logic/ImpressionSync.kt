@@ -1,11 +1,7 @@
 package ru.polyarbeiterz.impressionmap.core.logic
 
-import ru.polyarbeiterz.impressionmap.core.utils.toLocal
-import ru.polyarbeiterz.impressionmap.core.utils.toServerDto
+import ru.polyarbeiterz.impressionmap.core.service.ImpressionCoreService
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
-import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
-import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
-import ru.polyarbeiterz.impressionmap.data.service.MediaService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,30 +16,31 @@ fun List<ImpressionLocal>.filterAndSaveImpressionsWithCoords(
 
 @Singleton
 class ImpressionSynchronizer @Inject constructor(
-    val retrofitService: ImpressionBackendService,
-    val impressionService: ImpressionService,
-    val mediaService: MediaService
+    val impressionCoreService: ImpressionCoreService
 ) {
-    suspend fun synchronizeImpressions(now: List<ImpressionLocal>) {
+    suspend fun synchronizeImpressions() {
         // get remote and local
-        val remote = retrofitService.getAllImpressions().body() ?: emptySet()
-        val local = now.map { it.toServerDto() }.toSet()
+        val remote = impressionCoreService.getRemoteAll(withMedia = true)
+        val local = impressionCoreService.getLocalAll(withMedia = true)
 
-        // get sync
-        val same = remote.intersect(local)
+        // intersect by id
+        val inCommon = remote.map { it.localId }.intersect(local.map { it.localId })
 
-        // set local not sync
-        local.filter { imp ->
-            !same.contains(imp) && imp.onServer
-        }.forEach { imp ->
-            retrofitService.createImpression(imp)
+        // update existing remote and local
+        inCommon.forEach { id ->
+            val localById = local.find{imp -> imp.localId == id} ?: return@forEach
+            val remoteById = remote.find{imp -> imp.localId == id} ?: return@forEach
+            // TODO(update logic)
         }
 
-        // save remote not sync
-        remote.filter { imp ->
-            !same.contains(imp)
-        }.forEach { imp ->
-            impressionService.insertAll(imp.toLocal())
-        }
+        // send local to server
+        local
+            .filter { imp -> !inCommon.contains(imp.localId) }
+            .forEach { impressionCoreService.createImpressionWithMediaRemote(it) }
+
+        // send remote to local
+        remote
+            .filter { !inCommon.contains(it.localId) }
+            .forEach { impressionCoreService.createImpressionWithMediaLocal(it) }
     }
 }

@@ -312,7 +312,7 @@ fun MapInteractionScreen(
                 mapViewModel.viewModelScope.launch {
                     // get remote impressions and sync with them
                     try {
-                        mapViewModel.synchronizerService.synchronizeImpressions(impressionsList)
+                        mapViewModel.synchronizerService.synchronizeImpressions()
                     } catch (e: Exception) {
                         Log.e("NETWORK", "Could not sync with remote server")
                     }

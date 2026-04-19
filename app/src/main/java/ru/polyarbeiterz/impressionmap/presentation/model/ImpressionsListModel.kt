@@ -20,7 +20,7 @@ class ImpressionsListModel @Inject constructor(
 
     private val context = getApplication<Application>()
 
-    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
+    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAllFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun insertImp(imp: ImpressionLocal) {
