@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -23,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -100,18 +104,29 @@ fun SettingsInteractionScreen(
                 )
             }
 
-            Text(text = "Имя", color = MaterialTheme.colorScheme.onBackground)
-            Text(text = "Почта", color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                text = "Имя",
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Почта",
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Thin
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(18.dp)
             ) {
                 NonEntityCard(
                     cardName = "Настройки подключения",
-                    cardDescription = "Выбрать настройки подключения",
                     onClick = { modalToShow = 1 }
                 )
+                HorizontalDivider()
                 NonEntityCard(
                     cardName = "О приложении",
                     onClick = { modalToShow = 2 }
@@ -137,7 +152,7 @@ fun ConnectionSettingsDialogue(
 fun AboutAppDialogue(
     onDismissRequest: () -> Unit
 ) {
-    val indent = "    "
+
     Dialog({ onDismissRequest() }) {
         Card(
             modifier = Modifier
@@ -150,23 +165,33 @@ fun AboutAppDialogue(
                     .padding(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "ImpressionMap", lineHeight = 1.5.em, style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    text = "${indent}Приложение ImpressionMap позволяет сохранять впечатления от прогулок и путешествий в виде геометок на карте.\n\n" +
-                            "${indent}Данные можно хранить как локально, так и на любом доступном сервере.",
+                    text = "ImpressionMap",
+                    lineHeight = 1.5.em,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Приложение ImpressionMap позволяет сохранять впечатления от прогулок и путешествий в виде геометок на карте.\n\n" +
+                            "Данные можно хранить как локально, так и на любом доступном сервере.",
                     lineHeight = 1.5.em,
                 )
                 Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp)
+                        .padding(8.dp),
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(8.dp)
                     ) {
-                        Column(
-
-                        ) {
+                        Column() {
                             Text(text = "Авторы", fontWeight = FontWeight.Bold)
                             Text(
                                 text = "- Шаров Матвей Андреевич\n" +

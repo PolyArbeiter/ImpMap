@@ -28,46 +28,36 @@ fun NonEntityCard(
     cardDescription: String? = null,
     onClick: () -> Unit = {},
 ) {
-    OutlinedCard(
-        shape = RoundedCornerShape(16.dp),
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(4.dp)
-            .clip(shape = RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline
-        )
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(12.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = cardName,
-                    textAlign = TextAlign.Left,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                if (!cardDescription.isNullOrBlank())
-                    Text(
-                        text = cardDescription, textAlign = TextAlign.Left
-                    )
-            }
             Text(
-                text = ">", modifier = Modifier
-                    .padding(8.dp)
-                    .align(Alignment.CenterEnd)
+                text = cardName,
+                textAlign = TextAlign.Left,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
+            if (!cardDescription.isNullOrBlank())
+                Text(
+                    text = cardDescription,
+                    textAlign = TextAlign.Left,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
         }
+        Text(
+            text = ">",
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .padding(8.dp)
+                .align(Alignment.CenterEnd)
+        )
     }
 }

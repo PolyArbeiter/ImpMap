@@ -15,6 +15,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,6 +83,7 @@ fun MapComposable(navController: NavController) {
 }
 
 private var inputListener: InputListener? = null
+//private var cameraListener: CameraListener? = null
 
 @Composable
 fun MapInteractionScreen(
@@ -114,13 +116,13 @@ fun MapInteractionScreen(
             if (locationEnabled)
                 mapViewModel.fetchCurrentLocation()
             else
-                Toast.makeText(context, "Geolocation service must be turned on", Toast.LENGTH_SHORT)
+                Toast.makeText(context, "Сервис геолокации должен быть включен", Toast.LENGTH_SHORT)
                     .show()
         },
         onPermissionDenied = {
             Toast.makeText(
                 context,
-                "You must give access to fine location to use this feature",
+                "Вы должны дать разрешение на точное местоположение для использования этой функции",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -147,7 +149,6 @@ fun MapInteractionScreen(
         MapInteractionScreen(navController, context, locationPermissionLauncher)
     }
 }
-
 
 
 @Composable
@@ -193,23 +194,24 @@ fun MapInteractionScreen(
     if (showExitConfirmation)
         AlertDialog(
             onDismissRequest = { showExitConfirmation = false },
-            title = { Text("Exit App?") },
-            text = { Text("Are you sure you want to leave?") },
+            title = { Text("Выйти?") },
+            text = { Text("Вы точно хотите выйти?") },
             confirmButton = {
                 Button(onClick = {
                     (context as? Activity)?.finish()
                 }) {
-                    Text("Yes")
+                    Text("Да")
                 }
             },
             dismissButton = {
                 Button(onClick = { showExitConfirmation = false }) {
-                    Text("No")
+                    Text("Нет")
                 }
             }
         )
 
     Box(modifier = modifier.fillMaxSize()) {
+        val isDarkTheme = isSystemInDarkTheme()
         AndroidView(
             factory = { ctx ->
                 MapView(ctx).apply {
@@ -217,6 +219,10 @@ fun MapInteractionScreen(
 
                     val map = this.mapWindow.map
                     val mapWindow = this.mapWindow
+
+                    if (isDarkTheme) {
+                        map.isNightModeEnabled = true
+                    }
 
                     mapWindow.addSizeChangedListener(
                         { _, _, _ -> mapViewModel.updateFocusInfo() }
@@ -240,6 +246,10 @@ fun MapInteractionScreen(
                         }
                     }
 
+                    map.addCameraListener { map, cameraPosition, cameraUpdateReason, finished ->
+                        placemarkMapObject?.geometry = cameraPosition.target
+                    }
+
                     map.addInputListener(inputListener!!)
 
                     // set initial position (dirty)
@@ -247,7 +257,7 @@ fun MapInteractionScreen(
                         val loc = mapViewModel.locationService.getCurrentLocation()
                         val point = Point(
                             loc?.latitude ?: START_POSITION.target.latitude,
-                            loc?.latitude ?: START_POSITION.target.latitude
+                            loc?.longitude ?: START_POSITION.target.longitude
                         )
                         map.move(
                             CameraPosition(point, 15f, 0f, 0f),
@@ -262,25 +272,31 @@ fun MapInteractionScreen(
         )
 
         MapControls(
-            onZoomIn = {
-                mapViewModel.getMap()?.let { map ->
-                    val pos = map.cameraPosition
-                    map.move(
-                        CameraPosition(pos.target, pos.zoom + ZOOM_STEP, pos.azimuth, pos.tilt),
-                        SMOOTH_ANIMATION,
-                        null
-                    )
-                }
+            onZoomIn = onZoomIn@{
+                val now = System.currentTimeMillis()
+                if (now - lastZoomTime < ZOOM_DEBOUNCE) return@onZoomIn
+                lastZoomTime = now
+
+                val map = mapViewModel.getMap() ?: return@onZoomIn
+                val pos = map.cameraPosition
+                map.move(
+                    CameraPosition(pos.target, pos.zoom + ZOOM_STEP, pos.azimuth, pos.tilt),
+                    SMOOTH_ANIMATION,
+                    null
+                )
             },
-            onZoomOut = {
-                mapViewModel.getMap()?.let { map ->
-                    val pos = map.cameraPosition
-                    map.move(
-                        CameraPosition(pos.target, pos.zoom - ZOOM_STEP, pos.azimuth, pos.tilt),
-                        SMOOTH_ANIMATION,
-                        null
-                    )
-                }
+            onZoomOut = onZoomOut@{
+                val now = System.currentTimeMillis()
+                if (now - lastZoomTime < ZOOM_DEBOUNCE) return@onZoomOut
+                lastZoomTime = now
+
+                val map = mapViewModel.getMap() ?: return@onZoomOut
+                val pos = map.cameraPosition
+                map.move(
+                    CameraPosition(pos.target, pos.zoom - ZOOM_STEP, pos.azimuth, pos.tilt),
+                    SMOOTH_ANIMATION,
+                    null
+                )
             },
             onCreatePlacemark = {
                 // need refactor
@@ -298,7 +314,10 @@ fun MapInteractionScreen(
                     geometry = mapViewModel.getMap()!!.cameraPosition.target
                     setIcon(
                         ImageProvider.fromResource(context, R.drawable.marker_down),
-                        IconStyle().apply { anchor = PointF(0.5f, 1.0f) })
+                        IconStyle().apply {
+                            anchor = PointF(0.5f, 1.0f)
+                            scale = 2.0f
+                        })
                     isDraggable = true
                 }
             },
@@ -368,6 +387,8 @@ fun MapInteractionScreen(
 }
 
 private const val ZOOM_STEP = 1f
+private var lastZoomTime = 0L
+private const val ZOOM_DEBOUNCE = 500L
 
 @Composable
 fun MapControls(
