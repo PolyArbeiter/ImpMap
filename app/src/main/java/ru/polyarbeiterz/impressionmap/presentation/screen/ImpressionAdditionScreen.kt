@@ -194,7 +194,7 @@ fun ImpressionAdditionScreen(
         }
     }
 
-    Column() {
+    Column(Modifier.background(MaterialTheme.colorScheme.background)) {
         Box() {
             SimpleTopBar(
                 navController = navController,
@@ -234,7 +234,7 @@ fun ImpressionAdditionScreen(
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = {
                     if (title.isNullOrBlank()) {
-                        Text("Название должно быть заполнено", color = Color.Black)
+                        Text("Название должно быть заполнено")
                     }
                 },
             )
@@ -249,7 +249,7 @@ fun ImpressionAdditionScreen(
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = {
                     if (description.isNullOrBlank()) {
-                        Text("Описание должно быть заполнено", color = Color.Black)
+                        Text("Описание должно быть заполнено")
                     }
                 },
             )
@@ -284,20 +284,21 @@ fun ImpressionAdditionScreen(
                     )
                 )
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Поделиться на сервере", color = MaterialTheme.colorScheme.onBackground)
+                Spacer(modifier = Modifier.weight(1f))
+                Switch(checked = checkedSendToServer, onCheckedChange = {
+                    checkedSendToServer = it
+                })
+            }
+            MediaGrid(
+                context = context,
+                impressionId = currentImpressionId,
+                onImageTap = { selectedImage = it },
+                onImageLongPress = { mediaToDelete = it }
+            )
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Поделиться на сервере")
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(checked = checkedSendToServer, onCheckedChange = {
-                checkedSendToServer = it
-            })
-        }
-        MediaGrid(
-            context = context,
-            impressionId = currentImpressionId,
-            onImageTap = { selectedImage = it },
-            onImageLongPress = { mediaToDelete = it }
-        )
+
     }
     if (selectedImage != null) {
         FullScreenImageOverlay(
@@ -526,6 +527,7 @@ fun MediaGrid(
         }
     )
 
+
     if (showMediaDialog) {
         AlertDialog(
             onDismissRequest = { showMediaDialog = false },
@@ -545,7 +547,9 @@ fun MediaGrid(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
         items(
             mediaList.size,

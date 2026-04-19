@@ -30,11 +30,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -388,7 +390,9 @@ fun MapControls(
         ) {
             FloatingActionButton(
                 onClick = onZoomIn,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
                 Icon(
                     painter = painterResource(R.drawable.plus),
@@ -398,7 +402,9 @@ fun MapControls(
 
             FloatingActionButton(
                 onClick = onZoomOut,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
                 Icon(
                     painter = painterResource(R.drawable.minus),
@@ -418,6 +424,7 @@ fun MapControls(
                 Icon(
                     painter = painterResource(R.drawable.update),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(48.dp)
                         .navigationBarsPadding()
@@ -437,6 +444,7 @@ fun MapControls(
                 Icon(
                     painter = painterResource(R.drawable.plus),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(onClick = { onCreatePlacemark(); selectPointMode = true })
@@ -446,6 +454,7 @@ fun MapControls(
                 Icon(
                     painter = painterResource(R.drawable.cross_bolnisi),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(onClick = { onRejectPlaceMark(); selectPointMode = false })
@@ -454,6 +463,7 @@ fun MapControls(
                 Icon(
                     painter = painterResource(R.drawable.check),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(onClick = {
@@ -483,27 +493,42 @@ fun MainTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
+            .padding(horizontal = 12.dp)
     ) {
-        Button(onClick = { navController.navigate("settings_screen") }) {
+        Button(
+            onClick = { navController.navigate("settings_screen") },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
             Icon(
                 painter = painterResource(R.drawable.baseline_settings_24),
                 contentDescription = null
             )
         }
-        Button(onClick = {}) {
+        Button(
+            onClick = {},
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_filter_list_24),
                     contentDescription = null
                 )
                 Text(text = "Фильтр", modifier = Modifier.padding(horizontal = 12.dp))
-                Surface(color = Color.White, modifier = Modifier.clip(CircleShape)) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                    ) {
-                        Text(text = "2", modifier = Modifier.align(Alignment.Center))
+                if (1 == 2) { // Заглушка, потом добавлю функцию фильтрации и заживём...
+                    Surface(color = Color.White, modifier = Modifier.clip(CircleShape)) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                        ) {
+                            Text(text = "2", modifier = Modifier.align(Alignment.Center))
+                        }
                     }
                 }
             }
@@ -517,7 +542,11 @@ fun MainTopBar(
                     )
                 )
             },
-            enabled = !isLoading
+            enabled = !isLoading,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(

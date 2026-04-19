@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -27,7 +28,9 @@ fun BottomNavBar(
     Surface(
         modifier = modifier
             .navigationBarsPadding()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp)),
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -39,7 +42,8 @@ fun BottomNavBar(
             ) {
                 Text(
                     text = textLeft,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
             VerticalDivider(thickness = 1.dp, modifier = Modifier.height(24.dp))
@@ -51,7 +55,8 @@ fun BottomNavBar(
             ) {
                 Text(
                     text = textRight,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }

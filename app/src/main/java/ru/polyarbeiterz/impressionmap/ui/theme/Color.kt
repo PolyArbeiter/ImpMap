@@ -2,11 +2,10 @@ package ru.polyarbeiterz.impressionmap.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val DarkPrimary = Color(0xFF37b34a)
+val DarkSecondary = Color(0xFFBAE5A0)
+val DarkTetriary = Color(0xFFD1E82B)
 
-val Purple40 = Color(0xFF6650a4)
-var PurpleSpecial = Color(0xFFAA33FF)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val LightPrimary = Color(0xFF244128)
+val LightSecondary = Color(0xFF386520)
+val LightTetriary = Color(0xFF5A6C2D)

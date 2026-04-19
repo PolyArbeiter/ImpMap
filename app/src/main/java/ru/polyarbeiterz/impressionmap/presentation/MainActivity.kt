@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +20,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -160,7 +165,9 @@ fun ChoiceScreenComposable(
     }
 
     ImpressionMapTheme {
-        Box(modifier = modifier.fillMaxSize()) {
+        Box(modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)) {
             if (selectedHost?.name == "loading") {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (selectedHost?.port == -2 || selectedHost == null) {
@@ -186,6 +193,14 @@ fun ChoiceButtonScreen(
         modifier = modifier
             .padding(20.dp)
             .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp)),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline
+        ),
         shape = RoundedCornerShape(16.dp)
     ) {
         if (showModal)
@@ -211,7 +226,11 @@ fun ChoiceButtonScreen(
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth()
-                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(14.dp))
+                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(14.dp)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text(text = "Выбрать")
             }

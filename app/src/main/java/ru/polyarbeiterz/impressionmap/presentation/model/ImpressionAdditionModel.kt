@@ -1,6 +1,8 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,10 +16,12 @@ import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.MediaService
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import javax.inject.Inject
+import androidx.core.graphics.scale
 
 @HiltViewModel
 class ImpressionAdditionModel @Inject constructor(
@@ -53,9 +57,22 @@ class ImpressionAdditionModel @Inject constructor(
 
     fun addMediaToImpression(uri: Uri, type: MediaLocal.MediaType, impressionId: Int) {
         viewModelScope.launch {
-            val fileData =
-                context.contentResolver.openInputStream(uri)?.readBytes() ?: return@launch
             val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+
+            val fileData = if (type == MediaLocal.MediaType.IMAGE) {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+
+                if (bitmap != null) {
+                    compressImageToByteArray(bitmap, quality = 20, maxWidth = 200, maxHeight = 200)
+                } else {
+                    return@launch
+                }
+            } else {
+                context.contentResolver.openInputStream(uri)?.readBytes() ?: return@launch
+            }
+
             val mediaItem = MediaLocal(
                 impressionId = impressionId,
                 fileData = fileData,
@@ -64,6 +81,30 @@ class ImpressionAdditionModel @Inject constructor(
             )
             mediaService.insert(mediaItem)
         }
+    }
+
+    private fun compressImageToByteArray(
+        bitmap: Bitmap,
+        quality: Int,
+        maxWidth: Int = 1024,
+        maxHeight: Int = 1024
+    ): ByteArray {
+        // Scale down if too large
+        val scaledBitmap = if (bitmap.width > maxWidth || bitmap.height > maxHeight) {
+            val ratio = minOf(
+                maxWidth.toFloat() / bitmap.width,
+                maxHeight.toFloat() / bitmap.height
+            )
+            val newWidth = (bitmap.width * ratio).toInt()
+            val newHeight = (bitmap.height * ratio).toInt()
+            bitmap.scale(newWidth, newHeight)
+        } else {
+            bitmap
+        }
+
+        val stream = ByteArrayOutputStream()
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
+        return stream.toByteArray()
     }
 
     fun getMediaByImpId(impressionId: Int): Flow<List<MediaLocal>> {

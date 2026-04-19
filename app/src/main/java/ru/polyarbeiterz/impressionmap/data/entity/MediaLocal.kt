@@ -3,6 +3,7 @@ package ru.polyarbeiterz.impressionmap.data.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -14,6 +15,9 @@ import androidx.room.PrimaryKey
             childColumns = ["impression_id"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        Index(value = ["impression_id"])
     ]
 )
 data class MediaLocal(

@@ -2,6 +2,7 @@ package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +64,7 @@ fun SettingsInteractionScreen(
         2 -> AboutAppDialogue(onDismissRequest = { modalToShow = 0 })
     }
 
-    Column() {
+    Column(Modifier.background(MaterialTheme.colorScheme.background)) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -84,15 +84,24 @@ fun SettingsInteractionScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
         ) {
-            Image(
-                painter = painterResource(R.drawable.icon),
-                contentDescription = "Логотип приложения",
+            Box(
                 modifier = Modifier
                     .size(128.dp)
-                    .clip(CircleShape)
-            )
-            Text(text = "Имя")
-            Text(text = "Почта")
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.icon),
+                    contentDescription = "Логотип приложения",
+                    modifier = Modifier.size(128.dp)
+                )
+            }
+
+            Text(text = "Имя", color = MaterialTheme.colorScheme.onBackground)
+            Text(text = "Почта", color = MaterialTheme.colorScheme.onBackground)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -105,7 +114,6 @@ fun SettingsInteractionScreen(
                 )
                 NonEntityCard(
                     cardName = "О приложении",
-                    cardDescription = "",
                     onClick = { modalToShow = 2 }
                 )
 
@@ -129,6 +137,7 @@ fun ConnectionSettingsDialogue(
 fun AboutAppDialogue(
     onDismissRequest: () -> Unit
 ) {
+    val indent = "    "
     Dialog({ onDismissRequest() }) {
         Card(
             modifier = Modifier
@@ -141,11 +150,11 @@ fun AboutAppDialogue(
                     .padding(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "ImpressionMap", lineHeight = 1.5.em)
+                Text(text = "ImpressionMap", lineHeight = 1.5.em, style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    text = "Приложение ImpressionMap позволяет сохранять впечатления от прогулок и путешествий в виде геометок на карте.\n\n" +
-                            "Данные можно хранить как локально, так и на любом доступном сервере.",
-                    lineHeight = 1.5.em
+                    text = "${indent}Приложение ImpressionMap позволяет сохранять впечатления от прогулок и путешествий в виде геометок на карте.\n\n" +
+                            "${indent}Данные можно хранить как локально, так и на любом доступном сервере.",
+                    lineHeight = 1.5.em,
                 )
                 Card(
                     modifier = Modifier

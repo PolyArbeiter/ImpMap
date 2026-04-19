@@ -1,5 +1,6 @@
 package ru.polyarbeiterz.impressionmap.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,9 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -51,37 +52,42 @@ fun EntityCard(
                     onTap = { onClick() },
                     onLongPress = { onLongPress() }
                 )
-            }
+            },
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (chosen)
+                MaterialTheme.colorScheme.surfaceVariant
+            else
+                MaterialTheme.colorScheme.surfaceDim,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline
+        )
     ) {
-        Surface(
-            color = if (chosen) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.secondaryContainer,
-            shape = RoundedCornerShape(16.dp),
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(12.dp)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(12.dp)
-                ) {
-                    Text(
-                        text = cardName,
-                        textAlign = TextAlign.Left,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = cardDescription, textAlign = TextAlign.Left
-                    )
-                }
-                if (chosen) Text(
-                    text = "✓", modifier = Modifier
-                        .padding(8.dp)
-                        .align(Alignment.CenterEnd)
+                Text(
+                    text = cardName,
+                    textAlign = TextAlign.Left,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = cardDescription, textAlign = TextAlign.Left
                 )
             }
+            if (chosen) Text(
+                text = "✓", modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.CenterEnd)
+            )
         }
     }
 }

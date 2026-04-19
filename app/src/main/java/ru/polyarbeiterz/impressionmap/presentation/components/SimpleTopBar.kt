@@ -1,9 +1,12 @@
 package ru.polyarbeiterz.impressionmap.presentation.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,10 +28,13 @@ fun SimpleTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
+            .background(MaterialTheme.colorScheme.background)
     ) {
         TextButton(
             onClick = { navController.popBackStack() },
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
         ) {
             Text("Назад")
         }
@@ -37,11 +43,14 @@ fun SimpleTopBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.headlineSmall
         )
         TextButton(
             onClick = { actionButtonOnClick() },
             enabled = actionButtonEnabled,
-            modifier = Modifier.align(Alignment.TopEnd)
+            modifier = Modifier.align(Alignment.TopEnd),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
         ) {
             Text(actionButtonText)
         }

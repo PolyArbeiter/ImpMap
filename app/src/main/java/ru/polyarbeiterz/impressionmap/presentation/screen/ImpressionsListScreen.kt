@@ -1,6 +1,7 @@
 package ru.polyarbeiterz.impressionmap.presentation.screen
 
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,7 +62,9 @@ fun ImpressionsListScreen(
     impressionsListModel: ImpressionsListModel = hiltViewModel()
 ) {
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)) {
         Column() {
             ListTopBar(
                 navController,
@@ -133,15 +137,15 @@ fun ImpressionsList(
             key = { index ->
                 "${impressionsList[index].id}:${impressionsList[index].latitude}:${impressionsList[index].longitude}"
             }) { index ->
-                val el = impressionsList.elementAt(index)
-                EntityCard(
-                    cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
-                    cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
-                    onClick = { navController.navigate("impression_addition/${el.id}") },
-                    onLongPress = { impressionToDelete = el },
-                    chosen = false,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            val el = impressionsList.elementAt(index)
+            EntityCard(
+                cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
+                cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
+                onClick = { navController.navigate("impression_addition/${el.id}") },
+                onLongPress = { impressionToDelete = el },
+                chosen = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -160,29 +164,33 @@ fun ListTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
+            .padding(horizontal = 12.dp)
     ) {
-        Button( onClick = {navController.navigate("settings_screen")} ) {
+        Button(onClick = { navController.navigate("settings_screen") }) {
             Icon(
                 painter = painterResource(R.drawable.baseline_settings_24),
                 contentDescription = null
             )
         }
-        Button(onClick = {}, Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        Button(
+            onClick = {}, Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_filter_list_24),
                     contentDescription = null
                 )
                 Text(text = "Поиск", modifier = Modifier.padding(horizontal = 12.dp))
-                Surface(color = Color.White, modifier = Modifier.clip(CircleShape)) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                    ) {
-                        val i = 1;
-                        if (i > 0) {
-                            Text(text = i.toString(), modifier = Modifier.align(Alignment.Center))
+                if (1 == 2) { // Заглушка, потом добавлю функцию поиска и заживём...
+                    Surface(color = Color.White, modifier = Modifier.clip(CircleShape)) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                        ) {
+
                         }
                     }
                 }
