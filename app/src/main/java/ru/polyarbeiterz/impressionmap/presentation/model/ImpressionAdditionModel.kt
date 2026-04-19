@@ -32,7 +32,7 @@ class ImpressionAdditionModel @Inject constructor(
 
     private val context = getApplication<Application>()
 
-    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
+    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAllFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun getImpById(id: Int): Flow<ImpressionLocal> {
@@ -108,7 +108,7 @@ class ImpressionAdditionModel @Inject constructor(
     }
 
     fun getMediaByImpId(impressionId: Int): Flow<List<MediaLocal>> {
-        return mediaService.getByImpressionId(impressionId)
+        return mediaService.getByImpressionIdFlow(impressionId)
     }
 
     fun deleteMedia(mediaItem: MediaLocal) {

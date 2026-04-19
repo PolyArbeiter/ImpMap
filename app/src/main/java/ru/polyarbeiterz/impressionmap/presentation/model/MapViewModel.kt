@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -31,11 +30,11 @@ import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.logic.ImpressionSynchronizer
 import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
 import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
-import ru.polyarbeiterz.impressionmap.data.dto.ImpressionDto
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionService
 import ru.polyarbeiterz.impressionmap.data.service.LocationService
+import ru.polyarbeiterz.impressionmap.di.UrlManager
 import javax.inject.Inject
 
 data class MapUiState(
@@ -58,6 +57,7 @@ class MapViewModel @Inject constructor(
     val impressionService: ImpressionService,
     val retrofitService: ImpressionBackendService,
     val synchronizerService: ImpressionSynchronizer,
+    val urlManager: UrlManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -77,9 +77,8 @@ class MapViewModel @Inject constructor(
     }
 
 
-    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAll()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
+    val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAllFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),emptyList())
     fun setMapView(mapView: MapView?) {
         _uiState.update { it.copy(mapView = mapView) }
     }
@@ -161,12 +160,17 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    suspend fun synchronize(
-        local: Iterable<ImpressionDto>,
-        remote: Iterable<ImpressionDto>
-    ) {
-        if (!shouldSync.first()) return
-        synchronizerService.synchronize(local, remote)
+    fun updateUrl() {
+        viewModelScope.launch {
+            context.dataStore.data.collect {
+                urlManager.updateUrl(
+                    "http://" +
+                            "${it[PreferencesKeys.SELECTED_HOST_IP]}" +
+                            ":" +
+                            "${it[PreferencesKeys.SELECTED_HOST_PORT]}"
+                )   
+            }
+        }
     }
 
     fun deselectImpression() {

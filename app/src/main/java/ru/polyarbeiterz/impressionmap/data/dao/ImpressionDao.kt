@@ -10,7 +10,10 @@ import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 @Dao
 interface ImpressionDao {
     @Query("SELECT * FROM impressionlocal")
-    fun getAll(): Flow<List<ImpressionLocal>>
+    fun getAllFlow(): Flow<List<ImpressionLocal>>
+
+    @Query("SELECT * FROM impressionlocal")
+    suspend fun getAll(): List<ImpressionLocal>
 
     @Query("SELECT * FROM impressionlocal WHERE id = :impressionId LIMIT 1")
     fun getByImpId(impressionId: Int): Flow<ImpressionLocal>

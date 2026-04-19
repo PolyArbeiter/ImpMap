@@ -19,11 +19,17 @@ import javax.inject.Singleton
 @Singleton
 class UrlManager @Inject constructor() {
     private val _baseUrl = MutableStateFlow("http://127.0.0.1:8000")
+    private val _basic = MutableStateFlow("")
     private val _reachable = MutableStateFlow(true)
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
+    val basic: StateFlow<String> = _basic.asStateFlow()
 
     fun updateUrl(newUrl: String) {
         _baseUrl.value = newUrl
+    }
+
+    fun updateBasic(newBasic: String) {
+        _basic.value = newBasic
     }
 
     fun setReachable(reachable: Boolean) {
@@ -46,6 +52,7 @@ class DynamicUrlInterceptor @Inject constructor(
 
         val newRequest = originalRequest.newBuilder()
             .url(newUrl)
+            .header("Authorization", "Basic " + urlManager.basic.value)
             .build()
 
         return try {

@@ -16,7 +16,10 @@ interface MediaDao {
     suspend fun delete(mediaItem: MediaLocal)
 
     @Query("SELECT * FROM media_items WHERE impression_id = :impressionId")
-    fun getByImpId(impressionId: Int): Flow<List<MediaLocal>>
+    fun getByImpIdFlow(impressionId: Int): Flow<List<MediaLocal>>
+
+    @Query("SELECT * FROM media_items WHERE impression_id = :impressionId")
+    suspend fun getByImpId(impressionId: Int): List<MediaLocal>
 
     @Query("DELETE FROM media_items WHERE impression_id = :impressionId")
     suspend fun deleteByImpId(impressionId: Int)

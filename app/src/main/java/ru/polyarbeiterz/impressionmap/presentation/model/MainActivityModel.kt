@@ -1,10 +1,12 @@
 package ru.polyarbeiterz.impressionmap.presentation.model
 
 import android.app.Application
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,12 +14,17 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
+import ru.polyarbeiterz.impressionmap.data.datastore.UserCredentials
 import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
+import ru.polyarbeiterz.impressionmap.data.datastore.getBasicAuth
+import ru.polyarbeiterz.impressionmap.data.dto.LoginRequest
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.data.service.HostService
+import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
 import ru.polyarbeiterz.impressionmap.di.UrlManager
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -26,6 +33,7 @@ import javax.inject.Inject
 class MainActivityModel @Inject constructor(
     val hostService: HostService,
     val urlManager: UrlManager,
+    val impressionBackendService: ImpressionBackendService,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -46,6 +54,13 @@ class MainActivityModel @Inject constructor(
             }
         }
 
+    val selectedUserCredentials: Flow<UserCredentials> = context.dataStore.data
+        .map { preferences ->
+            val username = preferences[PreferencesKeys.SELECTED_USERNAME] ?: ""
+            val password = preferences[PreferencesKeys.SELECTED_PASSWORD] ?: ""
+            UserCredentials(username, password)
+        }
+
     fun selectHost(host: Host) {
         viewModelScope.launch {
             context.dataStore.edit { preferences ->
@@ -56,11 +71,22 @@ class MainActivityModel @Inject constructor(
         }
     }
 
+    fun selectUserCredentials(userCredentials: UserCredentials) {
+        viewModelScope.launch {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.SELECTED_USERNAME] = userCredentials.username
+                preferences[PreferencesKeys.SELECTED_PASSWORD] = userCredentials.password
+            }
+        }
+    }
+
     fun selectLocalMode() {
         viewModelScope.launch {
             context.dataStore.edit { preferences ->
                 preferences[PreferencesKeys.SELECTED_HOST_IP] = "127.0.0.1"
                 preferences[PreferencesKeys.SELECTED_HOST_PORT] = -1
+                preferences[PreferencesKeys.SELECTED_USERNAME] = ""
+                preferences[PreferencesKeys.SELECTED_PASSWORD] = ""
             }
         }
     }
@@ -101,18 +127,43 @@ class MainActivityModel @Inject constructor(
         }
     }
 
-    fun checkServerConnection(url: String): Boolean {
-        return try {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .build()
-            val request = Request.Builder()
-                .url(url)
-                .head()
-                .build()
-            client.newCall(request).execute().isSuccessful
-        } catch (e: Exception) {
-            false
+    suspend fun checkServerConnection(url: String, userCredentials: UserCredentials): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // form Base64
+                val encoded = userCredentials.getBasicAuth()
+
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .build()
+                val request = Request.Builder()
+                    .url(url + "/api/v1/impressions/impressions/")
+                    .head()
+                    .header("Authorization", "Basic " + encoded)
+                    .build()
+                val response = client.newCall(request).execute()
+                response.code() == 200
+            } catch (e: Exception) {
+                Log.e("PING_SERVER", e.message.toString())
+                false
+            }
+        }
+    }
+
+    suspend fun loginRequest(userCredentials: UserCredentials): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = impressionBackendService.login(
+                    LoginRequest(
+                        username = userCredentials.username,
+                        password = userCredentials.password
+                    )
+                )
+                response.code() == 200
+            } catch (e: Exception) {
+                Log.e("PING_SERVER", e.message.toString())
+                false
+            }
         }
     }
 }
