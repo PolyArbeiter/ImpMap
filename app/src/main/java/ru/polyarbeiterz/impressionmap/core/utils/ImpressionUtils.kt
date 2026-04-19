@@ -1,6 +1,6 @@
 package ru.polyarbeiterz.impressionmap.core.utils
 
-import ru.polyarbeiterz.impressionmap.data.dto.ImpressionDto
+import ru.polyarbeiterz.impressionmap.data.dto.ImpressionResponse
 import ru.polyarbeiterz.impressionmap.data.dto.MediaDto
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import java.sql.Date
@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
 
-fun ImpressionDto.toLocal(): ImpressionLocal =
+fun ImpressionResponse.toLocal(): ImpressionLocal =
     ImpressionLocal(
         latitude = this.latitude,
         longitude = this.longitude,
@@ -24,8 +24,8 @@ fun ImpressionDto.toLocal(): ImpressionLocal =
 
 fun ImpressionLocal.toServerDto(
     media: List<MediaDto> = emptyList()
-): ImpressionDto =
-    ImpressionDto(
+): ImpressionResponse =
+    ImpressionResponse(
         latitude = this.latitude,
         longitude = this.longitude,
         date = formatDateForServer(this.date),

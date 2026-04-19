@@ -53,6 +53,8 @@ import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.BuildConfig
+import ru.polyarbeiterz.impressionmap.data.datastore.UserCredentials
+import ru.polyarbeiterz.impressionmap.data.datastore.getBasicAuth
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.presentation.components.EntityCard
 import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
@@ -233,9 +235,20 @@ fun ChoiceDialog(
             port = -1
         )
     )
+    val selectedUserCredentials by mainActivityModel.selectedUserCredentials.collectAsState(
+        initial = UserCredentials(
+            username = "",
+            password = ""
+        )
+    )
     var showAdditionModal by remember { mutableStateOf(false) }
     var hostToDelete by remember { mutableStateOf<Host?>(null) }
     var showConnectionError by remember { mutableStateOf(false) }
+    var showCredentialsDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedUserCredentials) {
+        mainActivityModel.urlManager.updateBasic(selectedUserCredentials.getBasicAuth())
+    }
 
     if (hostToDelete != null) {
         AlertDialog(
@@ -279,12 +292,52 @@ fun ChoiceDialog(
         )
     }
 
+    if (showCredentialsDialog)
+        CredentialsDialog(
+            showModal = showCredentialsDialog,
+            onDismiss = {
+                showCredentialsDialog = false
+            },
+            onConfirm = { username, password ->
+                mainActivityModel.viewModelScope.launch {
+                    val cred = UserCredentials(username, password)
+                    mainActivityModel.selectUserCredentials(cred)
+
+                    val secondTry = mainActivityModel.checkServerConnection(
+                        mainActivityModel.urlManager.baseUrl.value,
+                        UserCredentials(username, password)
+                    )
+
+                    if (!secondTry) {
+                        mainActivityModel.selectLocalMode()
+                        showConnectionError = true
+                    }
+
+                    showCredentialsDialog = false
+                }
+            }
+        )
+
     if (showAdditionModal)
         ServerAdditionDialog(
             onDismissRequest = { showAdditionModal = false },
-            onAddition = { server: Host ->
+            onAddition = { server: Host, userCredentials: UserCredentials ->
                 mainActivityModel.viewModelScope.launch {
-                    mainActivityModel.insertHost(server)
+                    // try to select and login
+                    mainActivityModel.selectHost(server)
+                    mainActivityModel.urlManager.updateUrl(
+                        "http://${server.ip}:${server.port}"
+                    )
+                    mainActivityModel.selectUserCredentials(userCredentials)
+
+                    val couldAuth = mainActivityModel.loginRequest(userCredentials)
+
+                    if (couldAuth) {
+                        mainActivityModel.insertHost(server)
+                    } else {
+                        mainActivityModel.selectLocalMode()
+                        showConnectionError = true
+                    }
                 }
                 showAdditionModal = false
             },
@@ -332,14 +385,15 @@ fun ChoiceDialog(
                                         true
                                     } else {
                                         val url = "http://${el.ip}:${el.port}"
-                                        mainActivityModel.checkServerConnection(url)
+                                        // use existing credentials from datastore
+                                        mainActivityModel.checkServerConnection(
+                                            url, selectedUserCredentials
+                                        )
                                     }
-                                    // make ping handler for healthcheck of server
-                                    if (isReachable) {
-                                        mainActivityModel.selectHost(el)
-                                        mainActivityModel.urlManager.updateUrl(url)
-                                    } else {
-                                        showConnectionError = true
+                                    mainActivityModel.selectHost(el)
+                                    mainActivityModel.urlManager.updateUrl(url)
+                                    if (!isReachable) {
+                                        showCredentialsDialog = true
                                     }
                                 }
                             },
@@ -364,13 +418,16 @@ fun ChoiceDialog(
 fun ServerAdditionDialog(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onAddition: (server: Host) -> Unit,
+    onAddition: (server: Host, userCredentials: UserCredentials) -> Unit,
     isValidIp: (String) -> Boolean,
     isValidPort: (Int) -> Boolean
 ) {
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     Dialog({ onDismissRequest() }) {
         Card(
             modifier = modifier.fillMaxWidth(),
@@ -427,21 +484,47 @@ fun ServerAdditionDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    OutlinedTextField(
+                        value = username,
+                        label = { Text(text = "Имя пользователя") },
+                        onValueChange = { username = it },
+                        isError = username.isEmpty(),
+                        supportingText = {
+                            if (username.isEmpty()) {
+                                Text("Поле не может быть пустым", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        label = { Text(text = "Пароль") },
+                        onValueChange = { password = it },
+                        isError = password.isEmpty(),
+                        supportingText = {
+                            if (password.isEmpty()) {
+                                Text("Поле не может быть пустым", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
                 Button(
                     onClick = {
                         onAddition(
                             Host(
                                 name = name, ip = address, port = port.toInt()
-                            )
+                            ),
+                            UserCredentials(username, password)
                         )
                         name = ""
                         address = ""
                         port = ""
                     },
-                    enabled = (address.isNotEmpty() && isValidIp(address)) && (port.isNotEmpty() && isValidPort(
-                        port.toIntOrNull() ?: 0
-                    )),
+                    enabled = (address.isNotEmpty() && isValidIp(address)) &&
+                            (port.isNotEmpty() && isValidPort(port.toIntOrNull() ?: 0)) &&
+                            (username.isNotEmpty() && password.isNotEmpty())
+                    ,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(text = "Добавить") }
                 Button(
@@ -450,6 +533,84 @@ fun ServerAdditionDialog(
             }
         }
 
+    }
+}
+
+@Composable
+fun CredentialsDialog(
+    showModal: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (username: String, password: String) -> Unit
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isUsernameError by remember { mutableStateOf(false) }
+    var isPasswordError by remember { mutableStateOf(false) }
+
+    if (showModal) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Введите учетные данные") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = {
+                            username = it
+                            isUsernameError = it.isEmpty()
+                        },
+                        label = { Text("Имя пользователя") },
+                        isError = isUsernameError,
+                        supportingText = {
+                            if (isUsernameError) {
+                                Text("Поле не может быть пустым", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                            isPasswordError = it.isEmpty()
+                        },
+                        label = { Text("Пароль") },
+                        isError = isPasswordError,
+                        supportingText = {
+                            if (isPasswordError) {
+                                Text("Поле не может быть пустым", color = Color.Red)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        when {
+                            username.isEmpty() -> isUsernameError = true
+                            password.isEmpty() -> isPasswordError = true
+                            else -> {
+                                onConfirm(username, password)
+                                username = ""
+                                password = ""
+                            }
+                        }
+                    }
+                ) {
+                    Text("Подключиться")
+                }
+            },
+            dismissButton = {
+                Button(onClick = onDismiss) {
+                    Text("Отмена")
+                }
+            }
+        )
     }
 }
 

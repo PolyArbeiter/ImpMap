@@ -1,5 +1,5 @@
 package ru.polyarbeiterz.impressionmap.data.dto
-data class ImpressionDto(
+data class ImpressionResponse(
     //    val userId: Long? = null,
     //    val timeCreated: Long? = null,
     //    val timeModified: Long? = null,
@@ -15,7 +15,7 @@ data class ImpressionDto(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ImpressionDto
+        other as ImpressionResponse
 
         if (latitude != other.latitude) return false
         if (longitude != other.longitude) return false
