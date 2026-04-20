@@ -171,7 +171,7 @@ fun ImpressionsList(
                 image = if (el.userId == null) {
                     profileImage
                 } else {
-                    profileImage // TODO() Загружаем из таблицы пользователей
+                    null // TODO() Загружаем из таблицы пользователей
                 }
 
             )
