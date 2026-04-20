@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +60,7 @@ import com.yandex.mapkit.MapKitFactory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.BuildConfig
+import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.datastore.UserCredentials
 import ru.polyarbeiterz.impressionmap.data.datastore.getBasicAuth
 import ru.polyarbeiterz.impressionmap.data.entity.Host
@@ -73,6 +76,7 @@ import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setTheme(R.style.Theme_ImpressionMap)
         enableEdgeToEdge()
         try {
             MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
@@ -81,9 +85,10 @@ class MainActivity : ComponentActivity() {
         }
 
         MapKitFactory.initialize(this)
-
         setContent {
-            AppNavigation(LocalContext.current)
+            ImpressionMapTheme {
+                AppNavigation(LocalContext.current)
+            }
         }
     }
 
@@ -101,7 +106,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(context: Context) {
     val navController = rememberNavController()
-
     NavHost(
         navController = navController,
         startDestination = "choice_screen"
@@ -167,9 +171,11 @@ fun ChoiceScreenComposable(
     }
 
     ImpressionMapTheme {
-        Box(modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             if (selectedHost?.name == "loading") {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (selectedHost?.port == -2 || selectedHost == null) {
@@ -542,8 +548,7 @@ fun ServerAdditionDialog(
                     },
                     enabled = (address.isNotEmpty() && isValidIp(address)) &&
                             (port.isNotEmpty() && isValidPort(port.toIntOrNull() ?: 0)) &&
-                            (username.isNotEmpty() && password.isNotEmpty())
-                    ,
+                            (username.isNotEmpty() && password.isNotEmpty()),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(text = "Добавить") }
                 Button(
@@ -551,7 +556,6 @@ fun ServerAdditionDialog(
                 ) { Text(text = "Отменить") }
             }
         }
-
     }
 }
 

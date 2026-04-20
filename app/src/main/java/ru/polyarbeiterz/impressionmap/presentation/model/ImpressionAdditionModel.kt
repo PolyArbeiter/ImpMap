@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import javax.inject.Inject
 import androidx.core.graphics.scale
+import ru.polyarbeiterz.impressionmap.core.utils.compressImageToByteArray
 
 @HiltViewModel
 class ImpressionAdditionModel @Inject constructor(
@@ -81,30 +82,6 @@ class ImpressionAdditionModel @Inject constructor(
             )
             mediaService.insert(mediaItem)
         }
-    }
-
-    private fun compressImageToByteArray(
-        bitmap: Bitmap,
-        quality: Int,
-        maxWidth: Int = 1024,
-        maxHeight: Int = 1024
-    ): ByteArray {
-        // Scale down if too large
-        val scaledBitmap = if (bitmap.width > maxWidth || bitmap.height > maxHeight) {
-            val ratio = minOf(
-                maxWidth.toFloat() / bitmap.width,
-                maxHeight.toFloat() / bitmap.height
-            )
-            val newWidth = (bitmap.width * ratio).toInt()
-            val newHeight = (bitmap.height * ratio).toInt()
-            bitmap.scale(newWidth, newHeight)
-        } else {
-            bitmap
-        }
-
-        val stream = ByteArrayOutputStream()
-        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
-        return stream.toByteArray()
     }
 
     fun getMediaByImpId(impressionId: Int): Flow<List<MediaLocal>> {

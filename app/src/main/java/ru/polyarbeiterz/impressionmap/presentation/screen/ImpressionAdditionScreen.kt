@@ -527,7 +527,6 @@ fun MediaGrid(
         }
     )
 
-
     if (showMediaDialog) {
         AlertDialog(
             onDismissRequest = { showMediaDialog = false },
