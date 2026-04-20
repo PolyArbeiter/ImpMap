@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.core.logic.ImpressionSynchronizer
 import ru.polyarbeiterz.impressionmap.data.datastore.PreferencesKeys
+import ru.polyarbeiterz.impressionmap.data.datastore.UserProfile
 import ru.polyarbeiterz.impressionmap.data.datastore.dataStore
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
@@ -75,7 +76,6 @@ class MapViewModel @Inject constructor(
         }
         true
     }
-
 
     val allImpressions: StateFlow<List<ImpressionLocal>> = impressionService.getAllFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),emptyList())
@@ -182,5 +182,13 @@ class MapViewModel @Inject constructor(
             val ip = preferences[PreferencesKeys.SELECTED_HOST_IP] != "127.0.0.1"
             val port = preferences[PreferencesKeys.SELECTED_HOST_PORT] != -1
             ip && port
+        }
+
+    val selectedUserProfile: Flow<UserProfile> = context.dataStore.data
+        .map { preferences ->
+            val image = preferences[PreferencesKeys.PROFILE_IMAGE]
+            val username = preferences[PreferencesKeys.PROFILE_USERNAME] ?: "Имя"
+            val email = preferences[PreferencesKeys.PROFILE_EMAIL] ?: "Почта"
+            UserProfile(image, username, email)
         }
 }

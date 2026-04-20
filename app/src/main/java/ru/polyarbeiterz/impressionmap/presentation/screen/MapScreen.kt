@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.graphics.PointF
 import android.location.LocationManager
 import android.util.Log
@@ -14,6 +15,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +55,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +76,7 @@ import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.data.datastore.UserProfile
 import ru.polyarbeiterz.impressionmap.presentation.components.BottomNavBar
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -83,7 +90,6 @@ fun MapComposable(navController: NavController) {
 }
 
 private var inputListener: InputListener? = null
-//private var cameraListener: CameraListener? = null
 
 @Composable
 fun MapInteractionScreen(
@@ -167,6 +173,25 @@ fun MapInteractionScreen(
     var placemarkMapObject by remember { mutableStateOf<PlacemarkMapObject?>(null) }
 
     val impressionsList by mapViewModel.allImpressions.collectAsState()
+
+    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от воспоминаний
+    val userProfile by mapViewModel.selectedUserProfile.collectAsState(
+        initial = UserProfile(
+            null,
+            "Имя",
+            "Почта"
+        )
+    )
+
+    var username by remember { mutableStateOf(userProfile.username) }
+    var email by remember { mutableStateOf(userProfile.email) }
+    var profileImage by remember { mutableStateOf(userProfile.image) }
+
+    LaunchedEffect(userProfile) {
+        username = userProfile.username
+        email = userProfile.email
+        profileImage = userProfile.image
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -352,8 +377,8 @@ fun MapInteractionScreen(
         BottomNavBar(
             textLeft = "Карта",
             textRight = "Список",
-            onClickLeft = {},
-            onClickRight = { navController.navigate("impression_list_screen") },
+            onClickLeft = { mapViewModel.deselectImpression() },
+            onClickRight = { mapViewModel.deselectImpression(); navController.navigate("impression_list_screen") },
             modifier = modifier
                 .align(Alignment.BottomCenter)
         )
@@ -368,16 +393,52 @@ fun MapInteractionScreen(
                             .align(Alignment.TopCenter)
                             .offset(y = 80.dp)
                             .navigationBarsPadding()
-                            .width(200.dp)
+                            .width(350.dp)
                             .padding(8.dp)
                             .clickable(
-                                onClick = { navController.navigate("impression_addition/${it.id}") },
+                                onClick = {
+                                    navController.navigate("impression_addition/${it.id}")
+                                    mapViewModel.deselectImpression()
+                                },
                             ),
                         elevation = cardElevation(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(it.title ?: "No title", fontWeight = FontWeight.Bold)
-                            Text(it.description ?: "")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (profileImage != null) {
+                                val bitmap =
+                                    BitmapFactory.decodeByteArray(
+                                        profileImage,
+                                        0,
+                                        profileImage!!.size
+                                    )
+                                Image(
+                                    painter = BitmapPainter(bitmap.asImageBitmap()),
+                                    contentDescription = "Фото профиля",
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(it.title ?: "No title", fontWeight = FontWeight.Bold)
+                                Text(it.description ?: "")
+                            }
                         }
                     }
                 }
@@ -471,7 +532,10 @@ fun MapControls(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(48.dp)
-                        .clickable(onClick = { onCreatePlacemark(); selectPointMode = true })
+                        .clickable(onClick = {
+                            onCreatePlacemark(); selectPointMode =
+                            true; mapViewModel.deselectImpression()
+                        })
                 )
             } else {
                 // Confirm selected point or not
@@ -491,6 +555,7 @@ fun MapControls(
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(onClick = {
+                            mapViewModel.deselectImpression()
                             onStartImpCreation(
                                 mapViewModel.getCameraPositionTarget().latitude.toFloat(),
                                 mapViewModel.getCameraPositionTarget().longitude.toFloat()
@@ -520,7 +585,7 @@ fun MainTopBar(
             .padding(horizontal = 12.dp)
     ) {
         Button(
-            onClick = { navController.navigate("settings_screen") },
+            onClick = { mapViewModel.deselectImpression(); navController.navigate("settings_screen") },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -532,7 +597,7 @@ fun MainTopBar(
             )
         }
         Button(
-            onClick = {},
+            onClick = { mapViewModel.deselectImpression() },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -559,6 +624,7 @@ fun MainTopBar(
         }
         Button(
             onClick = {
+                mapViewModel.deselectImpression()
                 locationPermissionLauncher.launch(
                     arrayOf(
                         Manifest.permission.ACCESS_COARSE_LOCATION,
