@@ -4,7 +4,7 @@ data class ImpressionResponse(
     val userId: Long,
     val title: String,
     val description: String,
-    val date: String,
+    val date: Long,
     val latitude: Float,
     val longitude: Float,
     val media: List<MediaResponse> = emptyList()

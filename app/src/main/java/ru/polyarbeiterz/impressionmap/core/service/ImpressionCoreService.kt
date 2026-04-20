@@ -8,7 +8,6 @@ import ru.polyarbeiterz.impressionmap.core.logic.Impression
 import ru.polyarbeiterz.impressionmap.core.logic.Media
 import ru.polyarbeiterz.impressionmap.core.logic.toCore
 import ru.polyarbeiterz.impressionmap.core.logic.toLocal
-import ru.polyarbeiterz.impressionmap.core.utils.formatDateForServer
 import ru.polyarbeiterz.impressionmap.data.dto.MediaResponse
 import ru.polyarbeiterz.impressionmap.data.entity.MediaLocal
 import ru.polyarbeiterz.impressionmap.data.service.ImpressionBackendService
@@ -48,9 +47,9 @@ class ImpressionCoreService @Inject constructor(
         }
 
         return impressionsDto.map { impDto ->
-            val mediaList = impDto.media.map { mediaDto ->
+            val mediaList = impDto.media.mapNotNull { mediaDto ->
                 downloadMedia(mediaDto)
-            }.filterNotNull()
+            }
 
             impDto.toCore(mediaList)
         }
@@ -58,14 +57,11 @@ class ImpressionCoreService @Inject constructor(
 
     private suspend fun downloadMedia(media: MediaResponse): Media? {
         return try {
+            val mediaPath = media.file.replace("${urlManager.baseUrl.value}/", "")
             val response = if (media.isVideo) {
-                impressionBackendService.getVideo(
-                    media.file.replace("${urlManager.baseUrl.value}/", "")
-                )
+                impressionBackendService.getVideo(mediaPath)
             } else {
-                impressionBackendService.getImage(
-                    media.file.replace("${urlManager.baseUrl.value}/", "")
-                )
+                impressionBackendService.getImage(mediaPath)
             }
 
             if (!response.isSuccessful) return null
@@ -96,7 +92,7 @@ class ImpressionCoreService @Inject constructor(
             description = RequestBody.create(MediaType.parse("text/plain"), impression.description),
             latitude = RequestBody.create(MediaType.parse("text/plain"), impression.latitude.toString()),
             longitude = RequestBody.create(MediaType.parse("text/plain"), impression.longitude.toString()),
-            date = RequestBody.create(MediaType.parse("text/plain"), formatDateForServer(impression.date)),
+            date = RequestBody.create(MediaType.parse("text/plain"), impression.date.toString()),
             media = impression.media.mapIndexed { index, it ->
                 toMultiPartFile(byteArray = it.fileData, mediaType = it.mediaType, index = index)
             }
@@ -112,14 +108,14 @@ class ImpressionCoreService @Inject constructor(
             "image/jpeg"
         } else { "video/mp4" }
 
-        val reqFile = RequestBody.create(MediaType.parse(
+        val requestFile = RequestBody.create(MediaType.parse(
             mimeType
         ), byteArray)
 
         return MultipartBody.Part.createFormData(
             name,
-            "file_$index.jpg",
-            reqFile
+            "file_$index.${if (mediaType == MediaLocal.MediaType.IMAGE) "jpg" else "mp4"}",
+            requestFile
         )
     }
 

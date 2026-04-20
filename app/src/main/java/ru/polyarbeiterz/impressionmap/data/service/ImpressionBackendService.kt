@@ -51,8 +51,8 @@ interface ImpressionBackendService {
         @Part("latitude") latitude: RequestBody,
         @Part("longitude") longitude: RequestBody,
         @Part("date") date: RequestBody,
-        media: List<MultipartBody.Part>
-    )
+        @Part media: List<MultipartBody.Part>
+    ): Response<ResponseBody>
 
     @POST("api/v1/auth/login/")
     @Headers( value = [

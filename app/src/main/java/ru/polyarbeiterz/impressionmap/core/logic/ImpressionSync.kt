@@ -35,8 +35,10 @@ class ImpressionSynchronizer @Inject constructor(
 
         // send local to server
         local
-            .filter { imp -> !inCommon.contains(imp.localId) }
-            .forEach { impressionCoreService.createImpressionWithMediaRemote(it) }
+            .filter { imp -> !inCommon.contains(imp.localId) && imp.onServer }
+            .forEach {
+                impressionCoreService.createImpressionWithMediaRemote(it)
+            }
 
         // send remote to local
         remote
