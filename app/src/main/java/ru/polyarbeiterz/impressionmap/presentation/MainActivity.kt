@@ -8,7 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +27,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +60,6 @@ import kotlinx.coroutines.launch
 import ru.polyarbeiterz.impressionmap.BuildConfig
 import ru.polyarbeiterz.impressionmap.R
 import ru.polyarbeiterz.impressionmap.data.datastore.UserCredentials
-import ru.polyarbeiterz.impressionmap.data.datastore.getBasicAuth
 import ru.polyarbeiterz.impressionmap.data.entity.Host
 import ru.polyarbeiterz.impressionmap.presentation.components.EntityCard
 import ru.polyarbeiterz.impressionmap.presentation.model.MainActivityModel
@@ -272,7 +269,9 @@ fun ChoiceDialog(
     var showCredentialsDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedUserCredentials) {
-        mainActivityModel.urlManager.updateBasic(selectedUserCredentials.getBasicAuth())
+        mainActivityModel.urlManager.updateBasic(
+            selectedUserCredentials
+        )
     }
 
     if (hostToDelete != null) {

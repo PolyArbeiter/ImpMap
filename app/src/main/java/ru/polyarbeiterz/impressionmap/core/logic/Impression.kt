@@ -1,6 +1,5 @@
 package ru.polyarbeiterz.impressionmap.core.logic
 
-import ru.polyarbeiterz.impressionmap.core.utils.formatDateForLocal
 import ru.polyarbeiterz.impressionmap.data.dto.ImpressionResponse
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 
@@ -37,7 +36,7 @@ fun ImpressionResponse.toCore(mediaList: List<Media> = emptyList()): Impression 
         userId = this.userId,
         latitude = this.latitude,
         longitude = this.longitude,
-        date = formatDateForLocal(this.date),
+        date = this.date,
         title = this.title,
         description = this.description,
         onServer = true,

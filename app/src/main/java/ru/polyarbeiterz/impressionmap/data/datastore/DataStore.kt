@@ -56,3 +56,5 @@ fun UserCredentials.getBasicAuth(): String {
         .encodeToByteArray()
     return Base64.encodeToString(bytes, Base64.NO_WRAP)
 }
+
+fun UserCredentials.isNotBlank() = this.username.isNotBlank() && this.password.isNotBlank()
