@@ -172,6 +172,7 @@ fun ImpressionAdditionScreen(
         if (isNew) {
             val imp =
                 ImpressionLocal(
+                    userId = null,
                     latitude = lat,
                     longitude = lon,
                     timeCreated = System.currentTimeMillis(),

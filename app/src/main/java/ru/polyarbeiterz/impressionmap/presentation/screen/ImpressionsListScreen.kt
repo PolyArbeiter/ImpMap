@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,9 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import ru.polyarbeiterz.impressionmap.R
+import ru.polyarbeiterz.impressionmap.data.datastore.UserProfile
 import ru.polyarbeiterz.impressionmap.data.entity.ImpressionLocal
 import ru.polyarbeiterz.impressionmap.presentation.components.BottomNavBar
-import ru.polyarbeiterz.impressionmap.presentation.components.EntityCard
+import ru.polyarbeiterz.impressionmap.presentation.components.ImpressionListCard
 import ru.polyarbeiterz.impressionmap.presentation.model.ImpressionsListModel
 import ru.polyarbeiterz.impressionmap.presentation.model.MapViewModel
 import ru.polyarbeiterz.impressionmap.ui.theme.ImpressionMapTheme
@@ -62,9 +64,11 @@ fun ImpressionsListScreen(
     impressionsListModel: ImpressionsListModel = hiltViewModel()
 ) {
 
-    Box(modifier = modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column() {
             ListTopBar(
                 navController,
@@ -96,6 +100,26 @@ fun ImpressionsList(
     val impressionsList = impressionsListModel.allImpressions.collectAsState().value
 
     var impressionToDelete by remember { mutableStateOf<ImpressionLocal?>(null) }
+
+    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от воспоминаний
+    val userProfile by impressionsListModel.selectedUserProfile.collectAsState(
+        initial = UserProfile(
+            null,
+            "Имя",
+            "Почта"
+        )
+    )
+
+    var username by remember { mutableStateOf(userProfile.username) }
+    var email by remember { mutableStateOf(userProfile.email) }
+    var profileImage by remember { mutableStateOf(userProfile.image) }
+
+    LaunchedEffect(userProfile) {
+        username = userProfile.username
+        email = userProfile.email
+        profileImage = userProfile.image
+    }
+
 
     if (impressionToDelete != null) {
         AlertDialog(
@@ -138,13 +162,18 @@ fun ImpressionsList(
                 "${impressionsList[index].id}:${impressionsList[index].latitude}:${impressionsList[index].longitude}"
             }) { index ->
             val el = impressionsList.elementAt(index)
-            EntityCard(
+            ImpressionListCard(
                 cardName = el.title?.takeIf { it.isNotBlank() } ?: "Без названия",
                 cardDescription = el.description?.takeIf { it.isNotBlank() } ?: "Без описания",
                 onClick = { navController.navigate("impression_addition/${el.id}") },
                 onLongPress = { impressionToDelete = el },
-                chosen = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                image = if (el.userId == null) {
+                    profileImage
+                } else {
+                    profileImage // TODO() Загружаем из таблицы пользователей
+                }
+
             )
         }
     }
