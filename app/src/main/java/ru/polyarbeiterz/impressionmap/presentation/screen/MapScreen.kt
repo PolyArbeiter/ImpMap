@@ -174,7 +174,7 @@ fun MapInteractionScreen(
 
     val impressionsList by mapViewModel.allImpressions.collectAsState()
 
-    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от воспоминаний
+    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от впечатлений
     val userProfile by mapViewModel.selectedUserProfile.collectAsState(
         initial = UserProfile(
             null,

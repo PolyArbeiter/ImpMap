@@ -101,7 +101,7 @@ fun ImpressionsList(
 
     var impressionToDelete by remember { mutableStateOf<ImpressionLocal?>(null) }
 
-    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от воспоминаний
+    // Вместо всего этого, нужно будет загружать иконки пользователей для отображения слева от впечатлений
     val userProfile by impressionsListModel.selectedUserProfile.collectAsState(
         initial = UserProfile(
             null,
@@ -124,7 +124,7 @@ fun ImpressionsList(
     if (impressionToDelete != null) {
         AlertDialog(
             onDismissRequest = { impressionToDelete = null },
-            title = { Text("Удалить воспоминание?") },
+            title = { Text("Удалить впечатление?") },
             text = { Text("Вы уверены, что хотите удалить \"${impressionToDelete?.title}\"?") },
             confirmButton = {
                 Button(

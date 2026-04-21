@@ -226,7 +226,7 @@ fun ImpressionAdditionScreen(
             modifier
         ) {
             OutlinedTextField(
-                label = { Text(text = "Имя воспоминания") },
+                label = { Text(text = "Имя впечатления") },
                 value = title ?: "",
                 singleLine = true,
                 isError = title.isNullOrBlank(),
@@ -241,7 +241,7 @@ fun ImpressionAdditionScreen(
             )
 
             OutlinedTextField(
-                label = { Text(text = "Описание воспоминания") },
+                label = { Text(text = "Описание впечатления") },
                 value = description ?: "",
                 isError = description.isNullOrBlank(),
                 onValueChange = { description = it },

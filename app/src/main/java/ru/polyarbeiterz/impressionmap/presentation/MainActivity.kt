@@ -222,7 +222,7 @@ fun ChoiceButtonScreen(
                 modifier = Modifier.padding(8.dp)
             )
             Text(
-                text = "Выберите, где будете хранить данные о своих воспоминаниях",
+                text = "Выберите, где будете хранить данные о своих впечатлениях",
                 textAlign = TextAlign.Center
             )
             Button(
